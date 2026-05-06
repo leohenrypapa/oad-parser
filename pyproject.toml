@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "oad-parser"
+version = "0.1.0"
+description = "OAD parser platform for ECG/CD2 packet replay, parsing, detection, and JSONL output."
+authors = ["OAD Team"]
+readme = "README.md"
+packages = [{ include = "oad_parser" }]
+
+[tool.poetry.dependencies]
+python = ">=3.9.2,<4.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.0.0"
+pylint = "^3.0.0"
+coverage = "^7.0.0"
+
+[tool.poetry.scripts]
+oad-parser = "oad_parser.cli:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.pylint.main]
+py-version = "3.9"
+recursive = true
+
+[tool.pylint.messages_control]
+disable = [
+  "missing-module-docstring",
+  "missing-class-docstring",
+  "missing-function-docstring",
+  "too-few-public-methods"
+]
+
+[tool.coverage.run]
+source = ["oad_parser"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true

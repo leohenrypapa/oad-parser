@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+.venv-*/
+
+# Local artifacts
+*.pcap
+*.pcapng
+*.rpm
+*.wav
+*.tmp
+*.log
+
+# Private samples
+samples/private/*
+!samples/private/.gitkeep
+
+# OS/editor
+.DS_Store
+Thumbs.db
+*.swp
+
+
+# Generated source packs
+dist/source-packs/
+
+# OAD parser local/sensitive artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.pcap
+*.pcapng
+*.cap
+*.bin
+*.payload
+*.ecg
+*.log
+*.tmp
+corpus-report.json
+corpus-summary.txt
+demo.sh
+samples/private/
+
+# Python local environments and caches
+
+# Local operator demo scripts
