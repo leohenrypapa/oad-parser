@@ -21,6 +21,8 @@ class SourcePackTests(unittest.TestCase):
         self.assertTrue(should_include_source_pack_path("config/example.ini"))
         self.assertTrue(should_include_source_pack_path("README.md"))
         self.assertTrue(should_include_source_pack_path(".gitignore"))
+        self.assertTrue(should_include_source_pack_path("CODEOWNERS"))
+        self.assertTrue(should_include_source_pack_path("standards-manifest.json"))
 
         self.assertFalse(should_include_source_pack_path("demo.sh"))
         self.assertFalse(should_include_source_pack_path(".git/config"))
@@ -72,6 +74,15 @@ class SourcePackTests(unittest.TestCase):
         self.assertNotIn("output_path", manifest)
         self.assertNotIn(str(root), json.dumps(manifest))
         self.assertNotIn(str(output), json.dumps(manifest))
+        self.assertEqual(manifest["schema_version"], "2.0")
+        self.assertEqual(manifest["selected_profile"], "parser-project")
+        self.assertEqual(manifest["included_paths"], manifest["files"])
+        self.assertIsInstance(manifest["byte_count"], int)
+        self.assertGreater(manifest["byte_count"], 0)
+        self.assertEqual(set(manifest["file_hashes"]), set(manifest["files"]))
+        self.assertTrue(manifest["excluded_paths"])
+        self.assertTrue(manifest["manual_controls"])
+        self.assertEqual(manifest["validation"]["command_used"], "python3 -m oad_parser validate-platform")
 
     def test_create_source_pack_rejects_included_symlink(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -108,6 +119,9 @@ class SourcePackTests(unittest.TestCase):
         self.assertNotIn("output_path", manifest)
         self.assertNotIn(str(root), manifest_text)
         self.assertNotIn(str(output), manifest_text)
+        self.assertIn("source_repository_identifier", manifest)
+        self.assertIn("file_hashes", manifest)
+        self.assertIn("manual_controls", manifest)
 
     def test_tracked_only_without_git_uses_source_pack_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:

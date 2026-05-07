@@ -62,3 +62,6 @@ samples/private/
 # Python local environments and caches
 
 # Local operator demo scripts
+
+# Generated verification evidence
+reports/

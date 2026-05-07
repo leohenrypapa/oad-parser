@@ -1,15 +1,30 @@
 stages:
-  - test
+  - verify
 
-python-test:
-  stage: test
-  image: python:3.9
-  before_script:
-    - python -m pip install --upgrade pip
-    - pip install poetry
-    - poetry install
+variables:
+  # Manual/platform control: set this GitLab CI variable to an approved Registry1 image pinned by digest.
+  # Example shape only: registry1.dso.mil/<approved-path>/<image>@sha256:<64-hex-digest>
+  # Do not replace this with Docker Hub, a mutable tag, or an unapproved digest.
+  OAD_PARSER_CI_IMAGE: ""
+
+verify:
+  stage: verify
+  image:
+    name: "$OAD_PARSER_CI_IMAGE"
+  rules:
+    - if: '$OAD_PARSER_CI_IMAGE =~ /^registry1\\.dso\\.mil\/.+@sha256:[0-9a-f]{64}$/'
+      when: on_success
+    - when: never
   script:
-    - poetry run black --check oad_parser
-    - poetry run pylint oad_parser
-    - poetry run coverage run -m unittest discover -s oad_parser/tests -p "test_*.py"
-    - poetry run coverage report
+    - bash scripts/verify.sh
+  artifacts:
+    when: always
+    expire_in: 14 days
+    reports:
+      junit: reports/tests/junit.xml
+    paths:
+      - reports/standards-verify-report.json
+      - reports/tests/junit.xml
+      - reports/validation/
+      - reports/source-pack/source-pack-result.json
+      - reports/source-pack/source-pack-manifest-check.json

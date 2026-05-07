@@ -1,0 +1,177 @@
+{
+  "schema_version": "1.0",
+  "project": {
+    "name": "oad-parser",
+    "profile": "parser-project",
+    "language": "Python",
+    "runtime": "Python 3.9.2 or newer",
+    "purpose": "ECG/CD2 parser platform for pcap replay, raw ECG payload inspection, CD2 validation, corpus checks, golden fixtures, synthetic validation, and customer-safe source-pack handoff",
+    "semantic_caveat": "The beacon-candidate decoder is provisional and must not be treated as authoritative radar semantics."
+  },
+  "commands": {
+    "verify": {
+      "command": "bash scripts/verify.sh",
+      "enforcement": "repo-enforced",
+      "summary": "Run compile checks, unit tests with JUnit evidence, CLI help, platform validation, quickstart validation, and source-pack smoke checks."
+    },
+    "compile": {
+      "command": "python3 -m compileall -q oad_parser",
+      "enforcement": "repo-enforced",
+      "summary": "Compile Python package files with the selected Python interpreter."
+    },
+    "test": {
+      "command": "python3 scripts/run_tests_junit.py --tests-dir oad_parser/tests --pattern test_*.py --output reports/tests/junit.xml",
+      "enforcement": "repo-enforced",
+      "summary": "Run unittest discovery and emit JUnit XML."
+    },
+    "cli_help": {
+      "command": "python3 -m oad_parser --help",
+      "enforcement": "repo-enforced",
+      "summary": "Verify CLI entry point loads and prints help."
+    },
+    "platform_validation": {
+      "command": "python3 -m oad_parser validate-platform --json",
+      "enforcement": "repo-enforced",
+      "summary": "Run synthetic platform validation without private data."
+    },
+    "quickstart": {
+      "command": "bash scripts/quickstart_check.sh",
+      "enforcement": "repo-enforced",
+      "summary": "Run extraction-safe first-run validation."
+    },
+    "source_pack_smoke": {
+      "command": "python3 -m oad_parser create-source-pack --output reports/source-pack/oad-parser-source-pack-smoke.tar.gz --tracked-only --json",
+      "enforcement": "repo-enforced",
+      "summary": "Generate a customer-safe source pack smoke artifact."
+    },
+    "source_pack_manifest_check": {
+      "command": "python3 scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-smoke.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json",
+      "enforcement": "repo-enforced",
+      "summary": "Validate source-pack manifest reviewability, hashes, exclusions, and manual controls."
+    }
+  },
+  "evidence_outputs": [
+    {
+      "path": "reports/standards-verify-report.json",
+      "producer": "bash scripts/verify.sh",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/tests/junit.xml",
+      "producer": "scripts/run_tests_junit.py",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/validation/platform-validation.json",
+      "producer": "python3 -m oad_parser validate-platform --json",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/validation/quickstart-check.txt",
+      "producer": "bash scripts/quickstart_check.sh",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/source-pack/source-pack-result.json",
+      "producer": "python3 -m oad_parser create-source-pack --json",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/source-pack/source-pack-manifest-check.json",
+      "producer": "scripts/check_source_pack_manifest.py",
+      "committed_by_default": false
+    }
+  ],
+  "key_files": [
+    {
+      "path": "CODEOWNERS",
+      "category": "governance",
+      "enforcement": "manual-platform-after-placeholder-replacement"
+    },
+    {
+      "path": ".gitlab-ci.yml",
+      "category": "ci",
+      "enforcement": "manual-platform-image-required"
+    },
+    {
+      "path": "scripts/verify.sh",
+      "category": "verification",
+      "enforcement": "repo-enforced"
+    },
+    {
+      "path": "scripts/run_tests_junit.py",
+      "category": "test-evidence",
+      "enforcement": "repo-enforced"
+    },
+    {
+      "path": "scripts/check_source_pack_manifest.py",
+      "category": "source-pack-evidence",
+      "enforcement": "repo-enforced"
+    },
+    {
+      "path": "oad_parser/source_pack.py",
+      "category": "source-pack-generator",
+      "enforcement": "repo-enforced"
+    },
+    {
+      "path": "docs/release/STANDARDS_ADOPTION_CHECKLIST.md",
+      "category": "release-readiness",
+      "enforcement": "manual-review"
+    }
+  ],
+  "repo_enforced_controls": [
+    "Python package compile check",
+    "unittest suite execution",
+    "JUnit XML test evidence generation",
+    "CLI help load check",
+    "synthetic platform validation without private captures",
+    "quickstart validation without private captures",
+    "source-pack smoke generation",
+    "source-pack manifest schema and safety checks",
+    "customer-safe source-pack exclusions"
+  ],
+  "manual_platform_controls": [
+    "Replace CODEOWNERS placeholder groups with approved GitLab users or groups",
+    "Enable protected main branch in GitLab",
+    "Protect v* release tags in GitLab",
+    "Enable merge request approvals and CODEOWNERS approval in GitLab",
+    "Require passing pipelines before merge in GitLab",
+    "Set protected and masked CI variables only as needed",
+    "Set OAD_PARSER_CI_IMAGE to an approved Registry1 image pinned by digest",
+    "Restrict release and publish permissions to approved maintainers",
+    "Approve data classification and controlled-data handling before external AI or customer handoff",
+    "Approve SBOM, signing, and provenance tooling before treating those controls as automated"
+  ],
+  "source_pack_policy": {
+    "profile": "parser-project",
+    "default_mode": "tracked files only",
+    "required_manifest_fields": [
+      "schema_version",
+      "generated_at_utc",
+      "source_repository_identifier",
+      "selected_profile",
+      "task_scope",
+      "included_paths",
+      "excluded_paths",
+      "file_count",
+      "byte_count",
+      "file_hashes",
+      "warnings",
+      "validation",
+      "manual_controls"
+    ],
+    "required_exclusions": [
+      "pcaps",
+      "raw payloads",
+      "generated reports",
+      "archives",
+      "caches",
+      "virtual environments",
+      "Git internals",
+      "credentials",
+      "tokens",
+      "private keys",
+      "controlled data"
+    ]
+  }
+}

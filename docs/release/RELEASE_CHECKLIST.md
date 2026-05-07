@@ -20,6 +20,7 @@ Supported runtime: Python 3.9.2 or newer.
 Run from the repository root:
 
     git status --short
+    bash scripts/verify.sh
     python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
     python3.9 -m oad_parser validate-platform
     scripts/validate_sanitized_release.sh
@@ -40,3 +41,10 @@ Run from the repository root:
 - AI context guide is present.
 - Known limitations are present and consistent across docs.
 - Final source pack path and commit hash are recorded in the release message.
+
+## Standards adoption gate
+
+- CODEOWNERS exists but placeholder owners must be replaced before enforcing approvals.
+- `standards-manifest.json` indexes repo-local commands, generated evidence, key files, and manual/platform controls.
+- GitLab settings for protected main, protected v* tags, MR approvals, CODEOWNERS approval, passing pipelines, protected/masked variables, approved Registry1 pinned CI image, and release restrictions are manual/platform controls.
+- Generated `reports/` evidence is attached to controlled review or release records when required; it is not committed by default.

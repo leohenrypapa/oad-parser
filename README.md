@@ -48,6 +48,7 @@ The `beacon-candidate` decoder is provisional. Do not treat its fields as author
     docs/release/
       RELEASE_CHECKLIST.md
       CUSTOMER_HANDOFF.md
+      STANDARDS_ADOPTION_CHECKLIST.md
 
     docs/adr/
       0001-platform-foundation-scope.md
@@ -94,12 +95,19 @@ The parser core primarily uses the Python standard library.
 
 Run from the repo root:
 
+    bash scripts/verify.sh
+
+For a smaller manual check:
+
     python3 -m unittest discover -s oad_parser/tests -p "test_*.py"
     python3 -m oad_parser --help
+    python3 -m oad_parser validate-platform
 
 Expected:
 
     OK
+
+Generated verification evidence is written under `reports/` and is not committed by default.
 
 ## CD2 profile example
 
