@@ -1,20 +1,20 @@
 stages:
   - verify
 
-variables:
-  # Manual/platform control: set this GitLab CI variable to an approved Registry1 image pinned by digest.
-  # Example shape only: registry1.dso.mil/<approved-path>/<image>@sha256:<64-hex-digest>
-  # Do not replace this with Docker Hub, a mutable tag, or an unapproved digest.
-  OAD_PARSER_CI_IMAGE: "registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c"
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: always
+    - when: never
 
 verify:
   stage: verify
   image:
-    name: "$OAD_PARSER_CI_IMAGE"
-  rules:
-    - if: '$OAD_PARSER_CI_IMAGE =~ /^registry1\\.dso\\.mil\/.+@sha256:[0-9a-f]{64}$/'
-      when: on_success
-    - when: never
+    name: "registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c"
   script:
     - bash scripts/verify.sh
   artifacts:
