@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import tarfile
 import tempfile
 from dataclasses import dataclass
@@ -367,15 +368,21 @@ def _source_pack_manifest_files(root: Path) -> set:
 def _is_git_tracked(root: Path, relative_posix: str) -> bool:
     import subprocess
 
-    result = subprocess.run(
-        [*GIT_LS_FILES_COMMAND, relative_posix],
-        cwd=root,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
+    if shutil.which("git") is None:
+        return True
 
+    try:
+        result = subprocess.run(
+            [*GIT_LS_FILES_COMMAND, relative_posix],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except FileNotFoundError:
+        return True
+
+    return result.returncode == 0
 
 def _file_hashes(root: Path, files: Tuple[str, ...]) -> Dict[str, str]:
     hashes = {}

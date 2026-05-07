@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from hashlib import md5
+from oad_parser.fingerprints import md5
 from typing import Iterable
 
 from oad_parser.decoders.provisional_beacon_constants import (
