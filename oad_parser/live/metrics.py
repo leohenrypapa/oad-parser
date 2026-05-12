@@ -22,6 +22,7 @@ class LiveMetrics:
 
     non_ipv4_or_non_udp: int = 0
     non_ecg: int = 0
+    ecg_candidates: int = 0
     valid_ecg_payloads: int = 0
     error_records_emitted: int = 0
     detector_alerts: int = 0
@@ -40,6 +41,7 @@ class LiveMetrics:
             "malformed_count": self.malformed_count,
             "non_ipv4_or_non_udp": self.non_ipv4_or_non_udp,
             "non_ecg": self.non_ecg,
+            "ecg_candidates": self.ecg_candidates,
             "valid_ecg_payloads": self.valid_ecg_payloads,
             "error_records_emitted": self.error_records_emitted,
             "detector_alerts": self.detector_alerts,
