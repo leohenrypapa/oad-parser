@@ -82,6 +82,19 @@ class LiveClassifierTests(unittest.TestCase):
         self.assertEqual(metrics.non_ecg, 0)
         self.assertEqual(metrics.non_ipv4_or_non_udp, 0)
 
+    def test_udp_malformed_ecg_looking_payload_is_candidate_for_error_path(self):
+        metrics = LiveMetrics()
+        payload = bytearray(build_ecg_payload())
+        payload[0:2] = (999).to_bytes(2, "big")
+        frame = build_ethernet_ipv4_udp_frame(bytes(payload))
+
+        result = classify_live_frame(self._capture_frame(frame), metrics)
+
+        self.assertEqual(result.outcome, OUTCOME_ECG_CANDIDATE)
+        self.assertEqual(result.ecg_payload, bytes(payload))
+        self.assertEqual(metrics.ecg_candidates, 1)
+        self.assertEqual(metrics.non_ecg, 0)
+
     def test_classifier_does_not_require_metrics(self):
         frame = build_ethernet_ipv4_udp_frame(build_ecg_payload())
 

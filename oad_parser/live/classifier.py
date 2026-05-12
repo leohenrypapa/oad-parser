@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from oad_parser.ingest.ethernet import UdpFrame, parse_ipv4_udp_frame
 from oad_parser.live.metrics import LiveMetrics
 from oad_parser.live.records import LiveCaptureFrame
-from oad_parser.parsers.ecg import looks_like_ecg_payload
+from oad_parser.parsers.ecg import looks_like_ecg_candidate_payload
 
 
 OUTCOME_NON_IPV4_OR_NON_UDP = "non_ipv4_or_non_udp"
@@ -56,7 +56,7 @@ def classify_live_frame(
 
     metadata = packet_metadata_from_udp_frame(udp_frame)
 
-    if not looks_like_ecg_payload(udp_frame.payload):
+    if not looks_like_ecg_candidate_payload(udp_frame.payload):
         if metrics is not None:
             metrics.increment("non_ecg")
         return LiveFrameClassification(
