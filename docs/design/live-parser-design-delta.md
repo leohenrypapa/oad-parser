@@ -196,6 +196,8 @@ The Sprint 2 live capture adapter produces LiveCaptureFrame objects with interfa
 
 The Sprint 2 live CLI command loads LiveParserConfig, accepts --interface as a config override, uses --max-frames for test/smoke runs, and wires the capture adapter, service skeleton, rotating JSONL writer, audit JSONL writer, and local status writer together. A --max-frames 0 smoke run validates config and audit/status output without opening a raw socket.
 
+The Sprint 2 systemd template is `deploy/systemd/ecg-parser@.service`. It runs `/usr/bin/python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i` as root, uses `Restart=on-failure`, and applies restart limits to avoid tight restart loops.
+
 The systemd template will call the same module command by instance name:
 
     ecg-parser@eno1.service

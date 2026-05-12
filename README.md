@@ -199,3 +199,8 @@ Python 3.9.2 or newer is supported for customer runtime validation.
 - `validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
 - A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat this as a validation failure until the input format and parser selection are confirmed.
 - Source-pack generation rejects included symlinks and excludes local/private capture artifacts by policy. In extracted source packs, tracked-only mode is constrained by SOURCE-PACK-MANIFEST.json; use --include-untracked only for internal local snapshots.
+## Sprint 2 live parser systemd template
+
+The live parser systemd template is provided at `deploy/systemd/ecg-parser@.service` with operator guidance in `docs/ops/systemd-live-parser.md`.
+The template runs `python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i` as root for interface-specific instances such as `ecg-parser@eno1.service`.
+

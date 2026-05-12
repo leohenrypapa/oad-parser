@@ -153,6 +153,8 @@ Live command smoke example:
 
 The `--max-frames` option is for test and smoke runs only. Do not use it in the production systemd service.
 
+Systemd template documentation is available at `docs/ops/systemd-live-parser.md`. The template service is `deploy/systemd/ecg-parser@.service` and should be installed as `/etc/systemd/system/ecg-parser@.service`.
+
 ## What files are safe to share
 
 Usually safe to share:
