@@ -107,6 +107,11 @@ MESSAGE_NAME_BY_CODE = {
     4: "mar",
 }
 
+ECG_ERROR_LENGTH_MISMATCH = "ecg_length_mismatch"
+ECG_ERROR_SHORT_PAYLOAD = "ecg_short_payload"
+ECG_ERROR_MESSAGE_BLOCK_TRUNCATED = "ecg_message_block_truncated"
+ECG_WARNING_UNKNOWN_MESSAGE_CODE = "unknown_message_code"
+
 @dataclass(frozen=True)
 class EcgMessageEnvelope:
     """One ECG message block extracted from an ECG payload."""
@@ -151,6 +156,34 @@ class EcgMessageEnvelope:
             "destination_ip": self.destination_ip,
             "destination_port": self.destination_port,
         }
+
+@dataclass(frozen=True)
+class EcgEnvelopeParseIssue:
+    """Structured parse issue for the production live ECG path."""
+
+    code: str
+    message: str
+    parser_stage: str
+
+
+@dataclass(frozen=True)
+class EcgEnvelopeParseResult:
+    """ECG envelope parse result that preserves malformed-payload detail."""
+
+    envelopes: list[EcgMessageEnvelope]
+    error: EcgEnvelopeParseIssue | None = None
+    warnings: tuple[EcgEnvelopeParseIssue, ...] = ()
+    payload: bytes | None = None
+    packet_metadata: dict[str, object] | None = None
+
+    @property
+    def is_error(self) -> bool:
+        return self.error is not None
+
+    @property
+    def is_ecg_candidate(self) -> bool:
+        return self.payload is not None and looks_like_ecg_candidate_payload(self.payload)
+
 
 def extract_ecg_messages(
     frame: bytes,
@@ -277,6 +310,82 @@ def extract_ecg_messages(
         offset = message_payload_end
 
     return envelopes
+
+def extract_ecg_messages_with_errors(
+    frame: bytes,
+    skip_headers: bool = True,
+) -> EcgEnvelopeParseResult:
+    """Extract ECG envelopes and expose malformed ECG-looking payload errors.
+
+    Existing extract_ecg_messages and parse_frame behavior intentionally remain
+    unchanged. This API is for the production live path, where malformed
+    ECG-looking UDP payloads must become explicit error records.
+    """
+
+    payload, packet_metadata = _resolve_ecg_payload_and_metadata(frame, skip_headers)
+
+    if payload is None:
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            payload=None,
+            packet_metadata=packet_metadata,
+        )
+
+    if not looks_like_ecg_candidate_payload(payload):
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            payload=payload,
+            packet_metadata=packet_metadata,
+        )
+
+    if len(payload) < ECG_MIN_PAYLOAD_BYTES:
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            error=EcgEnvelopeParseIssue(
+                code=ECG_ERROR_SHORT_PAYLOAD,
+                message="ECG-looking payload is shorter than minimum ECG envelope",
+                parser_stage="ecg_envelope",
+            ),
+            payload=payload,
+            packet_metadata=packet_metadata,
+        )
+
+    ecg_payload_length = int.from_bytes(payload[:BYTES_PER_WORD], BYTE_ORDER)
+    expected_payload_length = len(payload) - ECG_LENGTH_TRAILER_BYTES
+    if ecg_payload_length != expected_payload_length:
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            error=EcgEnvelopeParseIssue(
+                code=ECG_ERROR_LENGTH_MISMATCH,
+                message=(
+                    "ECG length field does not match payload length: "
+                    f"declared={ecg_payload_length} expected={expected_payload_length}"
+                ),
+                parser_stage="ecg_envelope",
+            ),
+            payload=payload,
+            packet_metadata=packet_metadata,
+        )
+
+    block_issue = _validate_ecg_message_blocks(payload)
+    if block_issue is not None:
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            error=block_issue,
+            payload=payload,
+            packet_metadata=packet_metadata,
+        )
+
+    envelopes = extract_ecg_messages(frame, skip_headers=skip_headers)
+    warnings = tuple(_warnings_for_envelope(envelope) for envelope in envelopes if _warnings_for_envelope(envelope) is not None)
+
+    return EcgEnvelopeParseResult(
+        envelopes=envelopes,
+        warnings=warnings,
+        payload=payload,
+        packet_metadata=packet_metadata,
+    )
+
 
 def parse_frame(
     frame: bytes,
@@ -560,6 +669,91 @@ def _extract_plot_words(
             if int((word & ALTITUDE_SIGN_MASK) >> ALTITUDE_SIGN_SHIFT) == 1:
                 altitude *= -1
             record.altitude_feet = altitude
+
+def _resolve_ecg_payload_and_metadata(
+    frame: bytes,
+    skip_headers: bool,
+) -> tuple[bytes | None, dict[str, object]]:
+    if not skip_headers:
+        return frame, {}
+
+    udp_frame = parse_ipv4_udp_frame(frame)
+    if udp_frame is not None:
+        return udp_frame.payload, {
+            "source_ip": udp_frame.source_ip,
+            "source_port": udp_frame.source_port,
+            "destination_ip": udp_frame.destination_ip,
+            "destination_port": udp_frame.destination_port,
+            "ip_total_length": udp_frame.total_length,
+        }
+
+    if looks_like_ecg_candidate_payload(frame):
+        return frame, {}
+
+    return None, {}
+
+
+def _validate_ecg_message_blocks(payload: bytes) -> EcgEnvelopeParseIssue | None:
+    offset = ECG_MESSAGE_BLOCK_HEADER_BYTES
+
+    while offset < len(payload):
+        if offset + ECG_MESSAGE_BLOCK_HEADER_BYTES > len(payload):
+            return EcgEnvelopeParseIssue(
+                code=ECG_ERROR_MESSAGE_BLOCK_TRUNCATED,
+                message="ECG message block header overruns payload",
+                parser_stage="ecg_message_block",
+            )
+
+        message_data_length = int.from_bytes(
+            payload[offset : offset + BYTES_PER_WORD],
+            BYTE_ORDER,
+        )
+        if message_data_length == 0:
+            offset += 1
+            continue
+
+        message_payload_start = offset + ECG_MESSAGE_BLOCK_HEADER_BYTES
+        message_payload_end = message_payload_start + message_data_length
+        if message_payload_end > len(payload):
+            return EcgEnvelopeParseIssue(
+                code=ECG_ERROR_MESSAGE_BLOCK_TRUNCATED,
+                message="ECG message block payload overruns payload",
+                parser_stage="ecg_message_block",
+            )
+
+        offset = message_payload_end
+
+    return None
+
+
+def _warnings_for_envelope(envelope: EcgMessageEnvelope) -> EcgEnvelopeParseIssue | None:
+    if envelope.message_name == "none":
+        return EcgEnvelopeParseIssue(
+            code=ECG_WARNING_UNKNOWN_MESSAGE_CODE,
+            message=f"ECG message code is unmapped: {envelope.message_code}",
+            parser_stage="ecg_message_block",
+        )
+    return None
+
+
+def looks_like_ecg_candidate_payload(data: bytes) -> bool:
+    if len(data) < ECG_MESSAGE_OFFSET + 1:
+        return False
+
+    declared_length = int.from_bytes(data[:BYTES_PER_WORD], BYTE_ORDER)
+    if declared_length < 1:
+        return False
+
+    artcc = data[ARTCC_START:ARTCC_END]
+    if len(artcc) != ARTCC_END - ARTCC_START:
+        return False
+
+    for value in artcc:
+        if not (value == 0x20 or 0x30 <= value <= 0x39 or 0x41 <= value <= 0x5A):
+            return False
+
+    return data[ECG_MESSAGE_OFFSET] != 0
+
 
 def looks_like_ecg_payload(data: bytes) -> bool:
     return (
