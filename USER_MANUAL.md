@@ -149,6 +149,12 @@ MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/e
 
 Filebeat and Elastic Agent handoff guidance is available at `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection uses append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`.
 
+Synthetic acceptance harness example:
+
+    python3.9 scripts/run_live_acceptance_6100pps.py --duration-seconds 1 --target-pps 6100 --output reports/validation/live-acceptance-6100pps.json
+
+This harness uses synthetic in-memory frames only. It does not replace target-environment one-hour operational acceptance.
+
 Live command smoke example:
 
     python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10

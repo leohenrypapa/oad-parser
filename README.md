@@ -208,4 +208,7 @@ The template runs `python3.9 -m oad_parser live --config /etc/oad-parser/ecg_con
 MVP central collection guidance is documented at `docs/ops/filebeat-elastic-agent-handoff.md`.
 The MVP handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`.
 `/nsm/ecg/ecg-status.json` remains local-only for operator inspection.
+## Sprint 2 synthetic acceptance harness
 
+The synthetic live parser acceptance harness is `scripts/run_live_acceptance_6100pps.py`.
+It generates synthetic in-memory frames only and can emit a JSON report for the 6100 PPS best-effort target.

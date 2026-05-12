@@ -229,6 +229,8 @@ The production live path will add:
 - The Sprint 2 audit/status writer appends audit events to ecg-audit.jsonl and replaces ecg-status.json as one local JSON object for operator inspection.
 
 The Sprint 2 Filebeat/Elastic handoff document is `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection is limited to append-style `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`; `/nsm/ecg/ecg-status.json` remains local-only.
+
+The Sprint 2 acceptance harness is `scripts/run_live_acceptance_6100pps.py`. It provides sanitized synthetic evidence for the 6100 PPS best-effort target and explicitly does not replace one-hour operational acceptance on Oracle Linux Server 9.6 target hardware.
 - 6100 PPS peak acceptance evidence.
 
 ## Source-pack and artifact policy
