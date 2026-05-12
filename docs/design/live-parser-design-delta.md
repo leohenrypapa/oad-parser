@@ -220,6 +220,7 @@ The production live path will add:
 - Time and disk based pruning of closed files only. At disk use >=75 percent, prune closed files and block output if pruning cannot reduce below high-water. At disk use >=95 percent, emit best-effort critical audit/status evidence and exit nonzero for systemd failure handling.
 - The Sprint 2 storage policy only prunes closed rotated output files matching the active output prefix. It protects the active output file, active audit file, active status file, and unrelated operator files.
 - Audit JSONL and local status JSON outputs. MVP Filebeat/Elastic Agent handoff collects append-style files only: /nsm/ecg/ecg-current.json and /nsm/ecg/ecg-audit.jsonl. /nsm/ecg/ecg-status.json remains local-only for operators.
+- The Sprint 2 audit/status writer appends audit events to ecg-audit.jsonl and replaces ecg-status.json as one local JSON object for operator inspection.
 - 6100 PPS peak acceptance evidence.
 
 ## Source-pack and artifact policy

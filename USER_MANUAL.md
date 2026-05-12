@@ -145,6 +145,8 @@ Valid ECG event records may include `parse_warnings` when the parser can emit th
 
 MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`. `/nsm/ecg/ecg-status.json` is local-only for operators unless a later requirement adds central status ingestion.
 
+`/nsm/ecg/ecg-audit.jsonl` is JSON Lines audit output. `/nsm/ecg/ecg-status.json` is replaced as a single JSON object and is intended for local operator checks, not MVP central ingestion.
+
 ## What files are safe to share
 
 Usually safe to share:
