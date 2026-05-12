@@ -7,6 +7,7 @@ import unittest
 
 from oad_parser.parsers.ecg import (
     ECG_ERROR_LENGTH_MISMATCH,
+    ECG_WARNING_UNKNOWN_MESSAGE_CODE,
     extract_ecg_messages_with_errors,
 )
 from oad_parser.tests.test_ecg import build_ecg_payload, build_ethernet_ipv4_udp_frame
@@ -81,6 +82,42 @@ class LegacyEcgTransformerTests(unittest.TestCase):
         self.assertEqual(record["source_port"], 1000)
         self.assertEqual(record["destination_port"], 2000)
         self.assertEqual(record["sha256_ecg_payload"], hashlib.sha256(payload).hexdigest())
+
+    def test_warning_result_attaches_parse_warnings_to_valid_event(self):
+        payload = bytearray(build_ecg_payload())
+        payload[24] = 99
+        result = extract_ecg_messages_with_errors(bytes(payload), skip_headers=False)
+
+        records = transform_parse_result_to_legacy_records(
+            result=result,
+            timestamp_utc=FIXED_TIME,
+            interface="eno1",
+        )
+
+        self.assertEqual(len(records), 1)
+        record = records[0]
+        self.assertEqual(record["record_type"], "ecg_event")
+        self.assertEqual(record["message"], "unknown")
+        self.assertIn("parse_warnings", record)
+        self.assertEqual(len(record["parse_warnings"]), 1)
+        warning = record["parse_warnings"][0]
+        self.assertEqual(warning["code"], ECG_WARNING_UNKNOWN_MESSAGE_CODE)
+        self.assertIn("99", warning["message"])
+        self.assertEqual(warning["parser_stage"], "ecg_message_block")
+        json.dumps(record, sort_keys=True)
+
+    def test_valid_record_without_warning_omits_parse_warnings(self):
+        payload = build_ecg_payload()
+        result = extract_ecg_messages_with_errors(payload, skip_headers=False)
+
+        records = transform_parse_result_to_legacy_records(
+            result=result,
+            timestamp_utc=FIXED_TIME,
+            interface="eno1",
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertNotIn("parse_warnings", records[0])
 
     def test_error_record_includes_error_fields_and_payload_hash(self):
         payload = bytearray(build_ecg_payload())

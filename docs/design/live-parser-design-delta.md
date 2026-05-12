@@ -188,6 +188,8 @@ A later issue will add a separate production live command with the intended shap
 
     python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1
 
+The live command may also support --max-frames as a documented test/smoke option. It is not for production systemd use.
+
 The systemd template will call the same module command by instance name:
 
     ecg-parser@eno1.service
@@ -204,14 +206,16 @@ The production live path will add:
 - ECG discrimination.
 - Non-ECG metric counting without normal event output.
 - ECG parse-error records for malformed ECG-looking payloads.
-- Legacy-compatible JSONL records written to /nsm/ecg/ecg-current.json.
+- ECG parse warnings remain attached to valid ECG event records as parse_warnings objects with code, message, and parser_stage. Warnings do not convert an event into an ecg_parse_error. LiveMetrics tracks warning count. Audit receives aggregate warning summaries through periodic status, not one audit event per warning by default.
+- Legacy-compatible JSONL records written to /nsm/ecg/ecg-current.json. The active file keeps the .json suffix for legacy/runtime familiarity but uses JSON Lines behavior: one JSON object per line.
+- Rotated closed output files use UTC timestamped JSONL names such as /nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl. Name collisions append a numeric suffix such as -0001.
 - UTC @timestamp based on packet or event time.
 - JSON null for known fields that exist but cannot be parsed.
 - unknown only for categorical legacy compatibility fields.
 - SHA-256 of ECG payload for valid and error ECG records.
 - Rotating append-mode writer.
-- Time and disk based pruning of closed files only.
-- Audit JSONL and status JSON outputs.
+- Time and disk based pruning of closed files only. At disk use >=75 percent, prune closed files and block output if pruning cannot reduce below high-water. At disk use >=95 percent, emit best-effort critical audit/status evidence and exit nonzero for systemd failure handling.
+- Audit JSONL and local status JSON outputs. MVP Filebeat/Elastic Agent handoff collects append-style files only: /nsm/ecg/ecg-current.json and /nsm/ecg/ecg-audit.jsonl. /nsm/ecg/ecg-status.json remains local-only for operators.
 - 6100 PPS peak acceptance evidence.
 
 ## Source-pack and artifact policy

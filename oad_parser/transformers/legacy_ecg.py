@@ -6,7 +6,11 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from oad_parser.live.records import EcgOutputRecord, EcgParseErrorRecord, sha256_hex
-from oad_parser.parsers.ecg import EcgEnvelopeParseResult, EcgMessageEnvelope
+from oad_parser.parsers.ecg import (
+    EcgEnvelopeParseIssue,
+    EcgEnvelopeParseResult,
+    EcgMessageEnvelope,
+)
 
 
 LEGACY_NULL_FIELDS = (
@@ -59,6 +63,7 @@ def transform_parse_result_to_legacy_records(
             interface=interface,
             ecg_payload=result.payload,
             packet_metadata=result.packet_metadata or {},
+            parse_warnings=result.warnings,
         ).to_dict()
         for envelope in result.envelopes
     ]
@@ -70,10 +75,15 @@ def transform_envelope_to_legacy_record(
     interface: str,
     ecg_payload: bytes,
     packet_metadata: Dict[str, Any] | None = None,
+    parse_warnings: tuple[EcgEnvelopeParseIssue, ...] = (),
 ) -> EcgOutputRecord:
     """Build one legacy-compatible ECG event record from an envelope."""
 
-    fields = legacy_fields_for_envelope(envelope, ecg_payload)
+    fields = legacy_fields_for_envelope(
+        envelope,
+        ecg_payload,
+        parse_warnings=parse_warnings,
+    )
     fields.update(_packet_fields(packet_metadata or {}, envelope))
     return EcgOutputRecord(
         timestamp_utc=timestamp_utc,
@@ -110,6 +120,7 @@ def transform_parse_error_to_legacy_record(
 def legacy_fields_for_envelope(
     envelope: EcgMessageEnvelope,
     ecg_payload: bytes,
+    parse_warnings: tuple[EcgEnvelopeParseIssue, ...] = (),
 ) -> Dict[str, Any]:
     """Return legacy-compatible fields for a valid ECG envelope.
 
@@ -136,7 +147,23 @@ def legacy_fields_for_envelope(
     for name in LEGACY_NULL_FIELDS:
         fields[name] = None
 
+    if parse_warnings:
+        fields["parse_warnings"] = _parse_warning_dicts(parse_warnings)
+
     return fields
+
+
+def _parse_warning_dicts(
+    warnings: tuple[EcgEnvelopeParseIssue, ...],
+) -> List[Dict[str, str]]:
+    return [
+        {
+            "code": warning.code,
+            "message": warning.message,
+            "parser_stage": warning.parser_stage,
+        }
+        for warning in warnings
+    ]
 
 
 def legacy_error_fields() -> Dict[str, Any]:

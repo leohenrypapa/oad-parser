@@ -133,6 +133,14 @@ The parser output matched the comparison expectation for files in the test corpu
 
 A mismatch means parser behavior changed or the comparison expectation was not met. A developer or maintainer should review it.
 
+## Production live parser notes
+
+Sprint 2 live parser work keeps the existing bounded `capture` command separate from the planned production `live` command. The production command will use the active runtime output path `/nsm/ecg/ecg-current.json`. That file keeps the `.json` suffix for legacy/runtime familiarity, but its content is JSON Lines: one JSON object per line.
+
+Valid ECG event records may include `parse_warnings` when the parser can emit the event but also detects a non-fatal parse issue such as an unmapped ECG message code. Parse warnings include `code`, `message`, and `parser_stage`. Parse warnings do not convert the event into an `ecg_parse_error`. Malformed ECG-looking payloads still emit `ecg_parse_error` records.
+
+MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`. `/nsm/ecg/ecg-status.json` is local-only for operators unless a later requirement adds central status ingestion.
+
 ## What files are safe to share
 
 Usually safe to share:
