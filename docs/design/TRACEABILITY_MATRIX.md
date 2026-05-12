@@ -28,6 +28,7 @@ This section maps the production live ECG parser MVP requirements to planned imp
 | Support configured Linux interfaces including eno1 through eno5. | Live config, systemd | Live config and systemd issues | Example config and ecg-parser@.service document interface instance model. |
 | Inspect Ethernet/IPv4/UDP frames from interface traffic. | Ingest, classifier | #6 | Synthetic frame tests validate UDP/IPv4 classification without root socket access. |
 | Drop non-ECG from normal output and count it in metrics. | Classifier, metrics | #6 | Metrics tests cover non_ipv4_or_non_udp and non_ecg counters. |
+| Process ECG candidates through classify, parse, transform, and metrics flow without duplicate Ethernet/UDP parsing. | Classifier, live pipeline, parser, legacy transformer, metrics | Sprint 2 pipeline issue | Pipeline tests validate valid, warning, malformed, and non-ECG paths plus packet metadata reuse. |
 | Emit error records for malformed ECG-looking packets. | ECG envelope parser, transformer | #7, #8, Sprint 2 hardening | Malformed ECG-looking fixtures produce ecg_parse_error records without raw payload exposure. |
 | Preserve legacy field names where applicable. | Legacy transformer | #8, Sprint 2 warning policy | Transformer tests validate legacy-compatible field names and attach parse_warnings only to valid event records with warnings. |
 | Write runtime output as JSONL to /nsm/ecg/ecg-current.json. | Output writer | Later writer issue | Writer tests validate one JSON object per line and active file naming despite the .json suffix. |
