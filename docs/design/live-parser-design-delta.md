@@ -192,6 +192,8 @@ The live command may also support --max-frames as a documented test/smoke option
 
 The Sprint 2 service skeleton consumes finite LiveCaptureFrame iterables for unit testing. This keeps raw socket capture, JSONL writing, audit writing, status writing, and systemd integration separated into later implementation issues.
 
+The Sprint 2 live capture adapter produces LiveCaptureFrame objects with interface, UTC capture timestamp, frame length, and sequence_number metadata while preserving the bounded raw-byte iter_live_frames helper for compatibility.
+
 The systemd template will call the same module command by instance name:
 
     ecg-parser@eno1.service
