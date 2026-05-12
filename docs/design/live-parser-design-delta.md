@@ -227,6 +227,8 @@ The production live path will add:
 - The Sprint 2 storage policy only prunes closed rotated output files matching the active output prefix. It protects the active output file, active audit file, active status file, and unrelated operator files.
 - Audit JSONL and local status JSON outputs. MVP Filebeat/Elastic Agent handoff collects append-style files only: /nsm/ecg/ecg-current.json and /nsm/ecg/ecg-audit.jsonl. /nsm/ecg/ecg-status.json remains local-only for operators.
 - The Sprint 2 audit/status writer appends audit events to ecg-audit.jsonl and replaces ecg-status.json as one local JSON object for operator inspection.
+
+The Sprint 2 Filebeat/Elastic handoff document is `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection is limited to append-style `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`; `/nsm/ecg/ecg-status.json` remains local-only.
 - 6100 PPS peak acceptance evidence.
 
 ## Source-pack and artifact policy
