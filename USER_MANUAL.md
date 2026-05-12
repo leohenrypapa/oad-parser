@@ -147,6 +147,12 @@ MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/e
 
 `/nsm/ecg/ecg-audit.jsonl` is JSON Lines audit output. `/nsm/ecg/ecg-status.json` is replaced as a single JSON object and is intended for local operator checks, not MVP central ingestion.
 
+Live command smoke example:
+
+    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
+
+The `--max-frames` option is for test and smoke runs only. Do not use it in the production systemd service.
+
 ## What files are safe to share
 
 Usually safe to share:

@@ -188,11 +188,13 @@ A later issue will add a separate production live command with the intended shap
 
     python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1
 
-The live command may also support --max-frames as a documented test/smoke option. It is not for production systemd use.
+The live command supports --max-frames as a documented test/smoke option. It is not for production systemd use.
 
 The Sprint 2 service skeleton consumes finite LiveCaptureFrame iterables for unit testing. This keeps raw socket capture, JSONL writing, audit writing, status writing, and systemd integration separated into later implementation issues.
 
 The Sprint 2 live capture adapter produces LiveCaptureFrame objects with interface, UTC capture timestamp, frame length, and sequence_number metadata while preserving the bounded raw-byte iter_live_frames helper for compatibility.
+
+The Sprint 2 live CLI command loads LiveParserConfig, accepts --interface as a config override, uses --max-frames for test/smoke runs, and wires the capture adapter, service skeleton, rotating JSONL writer, audit JSONL writer, and local status writer together. A --max-frames 0 smoke run validates config and audit/status output without opening a raw socket.
 
 The systemd template will call the same module command by instance name:
 

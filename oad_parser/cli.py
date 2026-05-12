@@ -17,16 +17,19 @@ from oad_parser import __version__
 from oad_parser.compare import compare_legacy_records_to_envelopes, comparison_summary
 from oad_parser.corpus import validate_corpus_path
 from oad_parser.corpus_report import load_corpus_report, summarize_corpus_report
-from oad_parser.config import ParserConfig, load_parser_config
+from oad_parser.config import LiveParserConfig, ParserConfig, load_live_parser_config, load_parser_config
 from oad_parser.decoders.cd2_radar import decode_beacon_candidate_words, decode_raw12_words
 from oad_parser.decoders.registry import build_default_registry
 from oad_parser.fixture_samples import generate_fixture_samples
 from oad_parser.golden import check_golden_fixture, write_golden_fixture
 from oad_parser.errors import OadParserError
 from oad_parser.detectors import DetectionConfig, DetectionEngine
-from oad_parser.ingest.live_socket import iter_live_frames
+from oad_parser.ingest.live_socket import iter_live_capture_frames_from_config, iter_live_frames
 from oad_parser.ingest.pcap import iter_pcap_packets
 from oad_parser.inspect import inspect_pcap
+from oad_parser.live.audit import LiveObservabilityWriters
+from oad_parser.live.service import run_live_service
+from oad_parser.live.writer import RotatingJsonlWriter
 from oad_parser.output import validate_jsonl, write_jsonl
 from oad_parser.parsers.cd2 import (
     Cd2Frame,
@@ -68,6 +71,27 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Stop after N frames. Required for bounded JSONL output.",
+    )
+
+    live = subparsers.add_parser(
+        "live",
+        help="Run the production live ECG parser service.",
+    )
+    live.add_argument(
+        "--config",
+        default=None,
+        help="Optional live parser INI config path. Production default is /etc/oad-parser/ecg_conf.ini.",
+    )
+    live.add_argument(
+        "--interface",
+        default=None,
+        help="Linux interface to capture from, such as eno1 through eno5. Overrides config.",
+    )
+    live.add_argument(
+        "--max-frames",
+        type=int,
+        default=None,
+        help="Stop after N frames for test/smoke runs. Do not use for production systemd service.",
     )
 
     decode_cd2 = subparsers.add_parser(
@@ -283,6 +307,21 @@ def packet_timestamp_iso(
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
 
+def resolved_live_config_from_args(args: argparse.Namespace) -> LiveParserConfig:
+    config = load_live_parser_config(getattr(args, "config", None))
+
+    if getattr(args, "interface", None) is not None:
+        config.interface = args.interface.strip()
+
+    if not config.interface:
+        raise ValueError("live interface is required; pass --interface or set [Live] interface in config")
+
+    if getattr(args, "max_frames", None) is not None and args.max_frames < 0:
+        raise ValueError("live max_frames must be >= 0")
+
+    return config
+
+
 def resolved_config_from_args(args: argparse.Namespace) -> ParserConfig:
     config = load_parser_config(args.config)
 
@@ -428,6 +467,44 @@ def run_parse_pcap(args: argparse.Namespace) -> int:
 
     count = write_jsonl(records, Path(output_path), schema=config.schema)
     print(f"wrote {count} records to {output_path}")
+    return 0
+
+
+def run_live(args: argparse.Namespace) -> int:
+    config = resolved_live_config_from_args(args)
+    max_frames = getattr(args, "max_frames", None)
+
+    writer = RotatingJsonlWriter.from_config(config)
+    observability = LiveObservabilityWriters.from_config(config)
+
+    if max_frames == 0:
+        capture_frames = []
+    else:
+        capture_frames = iter_live_capture_frames_from_config(
+            config,
+            max_frames=max_frames,
+        )
+
+    result = run_live_service(
+        config,
+        capture_frames,
+        record_sink=writer.write_record,
+        audit_sink=observability.audit_sink,
+        status_sink=observability.status_sink,
+        max_frames=max_frames,
+    )
+
+    print(
+        "live stopped "
+        f"reason={result.stopped_reason} "
+        f"frames={result.frames_processed} "
+        f"records={result.records_emitted} "
+        f"interface={config.interface} "
+        f"output={config.output_json_file}"
+    )
+    if result.last_error:
+        print(f"last_error={result.last_error}")
+
     return 0
 
 
@@ -732,6 +809,8 @@ def main() -> int:
             return run_parse_pcap(args)
         if args.command == "capture":
             return run_capture(args)
+        if args.command == "live":
+            return run_live(args)
         if args.command == "decode-cd2-words":
             return run_decode_cd2_words(args)
         if args.command == "extract-ecg-messages":
