@@ -139,6 +139,8 @@ Sprint 2 live parser work keeps the existing bounded `capture` command separate 
 
 Closed rotated output files use UTC timestamped `.jsonl` names such as `/nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl`. If a rotated filename already exists, the writer appends a numeric suffix such as `-0001`.
 
+Storage protection prunes only closed rotated output files. It does not delete the active output file, active audit file, active status file, or unrelated operator files. At or above 75 percent disk usage, the service should prune closed files and block output if still above threshold. At or above 95 percent, the service should emit best-effort evidence and exit nonzero for systemd failure handling.
+
 Valid ECG event records may include `parse_warnings` when the parser can emit the event but also detects a non-fatal parse issue such as an unmapped ECG message code. Parse warnings include `code`, `message`, and `parser_stage`. Parse warnings do not convert the event into an `ecg_parse_error`. Malformed ECG-looking payloads still emit `ecg_parse_error` records.
 
 MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`. `/nsm/ecg/ecg-status.json` is local-only for operators unless a later requirement adds central status ingestion.

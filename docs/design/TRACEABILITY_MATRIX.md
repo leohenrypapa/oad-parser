@@ -44,7 +44,7 @@ This section maps the production live ECG parser MVP requirements to planned imp
 | Prune closed files older than 12 hours and oldest closed files at 75 percent disk use. | Storage policy | Later storage issue | Mocked storage tests validate age and high-water pruning. |
 | Never delete active output or active audit file. | Storage policy | Later storage issue | Active-file protection tests validate deletion exclusions. |
 | Block writer if pruning cannot lower disk use below high-water threshold. | Storage, service | Later failure behavior issue | Failure behavior tests validate writer_blocked_disk_high and drop counters. |
-| Fatal alert or nonzero exit at critical disk threshold, default 95 percent. | Storage, service, audit | Later failure behavior issue | Mocked critical-threshold tests validate best-effort critical audit/status evidence followed by nonzero service exit. |
+| Fatal alert or nonzero exit at critical disk threshold, default 95 percent. | Storage policy, later service/audit integration | Sprint 2 storage issue | Mocked critical-threshold tests validate critical result after best-effort pruning; later service issue converts this to audit/status evidence and nonzero exit. |
 | Emit audit JSONL and status JSON. | Audit, metrics | Later audit issue | Audit/status tests validate ecg-audit.jsonl and ecg-status.json. |
 | Provide Filebeat/Elastic Agent handoff assumptions. | SIEM docs | Later Filebeat docs issue | MVP handoff collects append-style ecg-current.json and ecg-audit.jsonl only; ecg-status.json remains local-only. |
 | Add 6100 PPS peak one-hour acceptance path. | Benchmark, reports | Later benchmark issue | Benchmark command and acceptance report capture received, dropped, parsed, emitted, and malformed counters. |
