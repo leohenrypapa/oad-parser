@@ -8,13 +8,29 @@ from __future__ import annotations
 
 from configparser import ConfigParser
 from dataclasses import dataclass
+from pathlib import Path
 
 DEFAULT_DISCOVERY_WINDOW_RECORDS = 100
 DEFAULT_MAX_SEQUENCE_DELTA = 10
 DEFAULT_MAX_RANGE_NM = 300.0
 DEFAULT_MAX_AZIMUTH_JUMP_DEGREES = 45.0
 DEFAULT_CD2_RECEIVE_FRAME_SIZE_WORDS = 32
-from pathlib import Path
+
+DEFAULT_LIVE_OUTPUT_JSON_FILE = "/nsm/ecg/ecg-current.json"
+DEFAULT_LIVE_OUTPUT_CSV_FILE = "/nsm/ecg/ecg.csv"
+DEFAULT_LIVE_OUTPUT_DIR = "/nsm/ecg"
+DEFAULT_LIVE_AUDIT_FILE = "/nsm/ecg/ecg-audit.jsonl"
+DEFAULT_LIVE_STATUS_FILE = "/nsm/ecg/ecg-status.json"
+DEFAULT_LIVE_INTERFACE = "eno1"
+DEFAULT_LIVE_MODE = "legacy_jsonl"
+DEFAULT_LIVE_ROTATE_SECONDS = 900
+DEFAULT_LIVE_ROTATE_MAX_BYTES = 536870912
+DEFAULT_LIVE_RECEIVE_BUFFER_BYTES = 134217728
+DEFAULT_LIVE_STATUS_INTERVAL_SECONDS = 60
+DEFAULT_LIVE_METRICS_INTERVAL_SECONDS = 60
+DEFAULT_LIVE_PRUNE_AFTER_SECONDS = 43200
+DEFAULT_LIVE_DISK_HIGH_WATER_PERCENT = 75
+DEFAULT_LIVE_DISK_CRITICAL_PERCENT = 95
 
 
 @dataclass
@@ -37,6 +53,43 @@ class ParserConfig:
     cd2_data_inversion: bool = False
     cd2_parity_mode: str = "odd"
     cd2_decoder: str | None = None
+
+
+@dataclass
+class LiveParserConfig:
+    output_json_file: str = DEFAULT_LIVE_OUTPUT_JSON_FILE
+    output_csv_file: str = DEFAULT_LIVE_OUTPUT_CSV_FILE
+    output_json: bool = True
+    output_csv: bool = False
+    output_csv_requested: bool = False
+    skip_headers: bool = True
+
+    check_range: bool = True
+    check_altitude: bool = True
+    check_azimuth: bool = True
+    check_site_discovery: bool = True
+    check_time_delta: bool = True
+    check_fingerprint: bool = True
+    output_status: bool = True
+
+    interface: str = DEFAULT_LIVE_INTERFACE
+    mode: str = DEFAULT_LIVE_MODE
+    rotate_seconds: int = DEFAULT_LIVE_ROTATE_SECONDS
+    rotate_max_bytes: int = DEFAULT_LIVE_ROTATE_MAX_BYTES
+    receive_buffer_bytes: int = DEFAULT_LIVE_RECEIVE_BUFFER_BYTES
+    status_interval_seconds: int = DEFAULT_LIVE_STATUS_INTERVAL_SECONDS
+    metrics_interval_seconds: int = DEFAULT_LIVE_METRICS_INTERVAL_SECONDS
+
+    output_dir: str = DEFAULT_LIVE_OUTPUT_DIR
+    prune_after_seconds: int = DEFAULT_LIVE_PRUNE_AFTER_SECONDS
+    disk_high_water_percent: int = DEFAULT_LIVE_DISK_HIGH_WATER_PERCENT
+    disk_critical_percent: int = DEFAULT_LIVE_DISK_CRITICAL_PERCENT
+    block_when_full: bool = True
+    compress_archives: bool = False
+    compress_archives_requested: bool = False
+
+    audit_file: str = DEFAULT_LIVE_AUDIT_FILE
+    status_file: str = DEFAULT_LIVE_STATUS_FILE
 
 
 def load_parser_config(path: str | Path | None) -> ParserConfig:
@@ -130,6 +183,189 @@ def load_parser_config(path: str | Path | None) -> ParserConfig:
         raise ValueError("cd2 decoder must be raw12 or beacon-candidate")
 
     return config
+
+
+def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
+    config = LiveParserConfig()
+    if path is None:
+        return config
+
+    parser = ConfigParser()
+    loaded = parser.read(path)
+    if not loaded:
+        raise FileNotFoundError(f"config file not found: {path}")
+
+    if parser.has_section("Outputs"):
+        config.output_json_file = _get_string(
+            parser,
+            "Outputs",
+            "output_json_file",
+            config.output_json_file,
+        )
+        config.output_csv_file = _get_string(
+            parser,
+            "Outputs",
+            "output_csv_file",
+            config.output_csv_file,
+        )
+
+    if parser.has_section("Options"):
+        config.skip_headers = parser.getboolean("Options", "skip_headers", fallback=config.skip_headers)
+        config.output_json = parser.getboolean("Options", "output_json", fallback=config.output_json)
+
+        requested_csv = parser.getboolean("Options", "output_csv", fallback=config.output_csv_requested)
+        config.output_csv_requested = requested_csv
+        config.output_csv = False
+
+        config.check_range = parser.getboolean("Options", "check_range", fallback=config.check_range)
+        config.check_altitude = parser.getboolean("Options", "check_altitude", fallback=config.check_altitude)
+        config.check_azimuth = parser.getboolean("Options", "check_azimuth", fallback=config.check_azimuth)
+        config.check_site_discovery = parser.getboolean(
+            "Options",
+            "check_site_discovery",
+            fallback=config.check_site_discovery,
+        )
+        config.check_time_delta = parser.getboolean(
+            "Options",
+            "check_time_delta",
+            fallback=config.check_time_delta,
+        )
+        config.check_fingerprint = parser.getboolean(
+            "Options",
+            "check_fingerprint",
+            fallback=config.check_fingerprint,
+        )
+        config.output_status = parser.getboolean("Options", "output_status", fallback=config.output_status)
+
+    if parser.has_section("Live"):
+        config.interface = _get_string(parser, "Live", "interface", config.interface)
+        config.mode = _get_string(parser, "Live", "mode", config.mode)
+        config.rotate_seconds = parser.getint("Live", "rotate_seconds", fallback=config.rotate_seconds)
+        config.rotate_max_bytes = parser.getint("Live", "rotate_max_bytes", fallback=config.rotate_max_bytes)
+        config.receive_buffer_bytes = parser.getint(
+            "Live",
+            "receive_buffer_bytes",
+            fallback=config.receive_buffer_bytes,
+        )
+        config.status_interval_seconds = parser.getint(
+            "Live",
+            "status_interval_seconds",
+            fallback=config.status_interval_seconds,
+        )
+        config.metrics_interval_seconds = parser.getint(
+            "Live",
+            "metrics_interval_seconds",
+            fallback=config.metrics_interval_seconds,
+        )
+
+    if parser.has_section("Storage"):
+        config.output_dir = _get_string(parser, "Storage", "output_dir", config.output_dir)
+        config.prune_after_seconds = parser.getint(
+            "Storage",
+            "prune_after_seconds",
+            fallback=config.prune_after_seconds,
+        )
+        config.disk_high_water_percent = parser.getint(
+            "Storage",
+            "disk_high_water_percent",
+            fallback=config.disk_high_water_percent,
+        )
+        config.disk_critical_percent = parser.getint(
+            "Storage",
+            "disk_critical_percent",
+            fallback=config.disk_critical_percent,
+        )
+        config.block_when_full = parser.getboolean(
+            "Storage",
+            "block_when_full",
+            fallback=config.block_when_full,
+        )
+
+        requested_compression = parser.getboolean(
+            "Storage",
+            "compress_archives",
+            fallback=config.compress_archives_requested,
+        )
+        config.compress_archives_requested = requested_compression
+        config.compress_archives = False
+
+    if parser.has_section("Audit"):
+        config.audit_file = _get_string(parser, "Audit", "audit_file", config.audit_file)
+        config.status_file = _get_string(parser, "Audit", "status_file", config.status_file)
+
+    _apply_existing_ini_fallbacks(parser, config)
+    _validate_live_parser_config(config)
+    return config
+
+
+def _apply_existing_ini_fallbacks(parser: ConfigParser, config: LiveParserConfig) -> None:
+    if parser.has_section("output"):
+        output_path = _optional_string(parser.get("output", "path", fallback=None))
+        if output_path is not None and not parser.has_section("Outputs"):
+            config.output_json_file = output_path
+
+    if parser.has_section("capture"):
+        interface = _optional_string(parser.get("capture", "interface", fallback=None))
+        if interface is not None and not parser.has_section("Live"):
+            config.interface = interface
+
+    if parser.has_section("detectors") and not parser.has_section("Options"):
+        detectors_enabled = parser.getboolean("detectors", "enabled", fallback=True)
+        if not detectors_enabled:
+            config.check_range = False
+            config.check_altitude = False
+            config.check_azimuth = False
+            config.check_site_discovery = False
+            config.check_time_delta = False
+            config.check_fingerprint = False
+
+
+def _validate_live_parser_config(config: LiveParserConfig) -> None:
+    if not config.output_json:
+        raise ValueError("live JSON output must remain enabled for MVP")
+
+    if config.output_csv:
+        raise ValueError("live CSV output is disabled for MVP")
+
+    if not config.output_json_file:
+        raise ValueError("live output_json_file is required")
+
+    if not config.interface:
+        raise ValueError("live interface is required")
+
+    if config.mode != "legacy_jsonl":
+        raise ValueError("live mode must be legacy_jsonl for MVP")
+
+    if config.rotate_seconds < 1:
+        raise ValueError("live rotate_seconds must be >= 1")
+
+    if config.rotate_max_bytes < 1:
+        raise ValueError("live rotate_max_bytes must be >= 1")
+
+    if config.receive_buffer_bytes < 1:
+        raise ValueError("live receive_buffer_bytes must be >= 1")
+
+    if config.status_interval_seconds < 1:
+        raise ValueError("live status_interval_seconds must be >= 1")
+
+    if config.metrics_interval_seconds < 1:
+        raise ValueError("live metrics_interval_seconds must be >= 1")
+
+    if config.prune_after_seconds < 0:
+        raise ValueError("live prune_after_seconds must be >= 0")
+
+    if not 0 <= config.disk_high_water_percent <= 100:
+        raise ValueError("live disk_high_water_percent must be between 0 and 100")
+
+    if not 0 <= config.disk_critical_percent <= 100:
+        raise ValueError("live disk_critical_percent must be between 0 and 100")
+
+    if config.disk_critical_percent <= config.disk_high_water_percent:
+        raise ValueError("live disk_critical_percent must be greater than disk_high_water_percent")
+
+
+def _get_string(parser: ConfigParser, section: str, option: str, default: str) -> str:
+    return _optional_string(parser.get(section, option, fallback=None)) or default
 
 
 def _optional_string(value: str | None) -> str | None:
