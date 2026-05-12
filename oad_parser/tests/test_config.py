@@ -259,6 +259,38 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.disk_critical_percent, 95)
         self.assertFalse(config.compress_archives)
 
+    def test_live_config_rejects_invalid_mvp_values(self):
+        cases = [
+            ("[Options]\noutput_json = false\n", "live JSON output"),
+            ("[Live]\nmode = csv\n", "live mode"),
+            ("[Live]\ninterface =    \n", "live interface"),
+            ("[Live]\nrotate_seconds = 0\n", "rotate_seconds"),
+            ("[Live]\nrotate_max_bytes = 0\n", "rotate_max_bytes"),
+            ("[Live]\nreceive_buffer_bytes = 0\n", "receive_buffer_bytes"),
+            ("[Live]\nstatus_interval_seconds = 0\n", "status_interval_seconds"),
+            ("[Live]\nmetrics_interval_seconds = 0\n", "metrics_interval_seconds"),
+            ("[Storage]\nprune_after_seconds = -1\n", "prune_after_seconds"),
+            ("[Storage]\ndisk_high_water_percent = -1\n", "disk_high_water_percent"),
+            ("[Storage]\ndisk_high_water_percent = 101\n", "disk_high_water_percent"),
+            ("[Storage]\ndisk_critical_percent = -1\n", "disk_critical_percent"),
+            ("[Storage]\ndisk_critical_percent = 101\n", "disk_critical_percent"),
+            (
+                "[Storage]\ndisk_high_water_percent = 75\ndisk_critical_percent = 75\n",
+                "disk_critical_percent",
+            ),
+        ]
+
+        for body, expected_text in cases:
+            with self.subTest(expected_text=expected_text, body=body):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    path = Path(tmpdir) / "bad-live.ini"
+                    path.write_text(body, encoding="utf-8")
+
+                    with self.assertRaises(ValueError) as raised:
+                        load_live_parser_config(path)
+
+                    self.assertIn(expected_text, str(raised.exception))
+
     def test_live_config_rejects_unsafe_threshold_order(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "bad.ini"
