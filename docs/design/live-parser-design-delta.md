@@ -190,6 +190,8 @@ A later issue will add a separate production live command with the intended shap
 
 The live command may also support --max-frames as a documented test/smoke option. It is not for production systemd use.
 
+The Sprint 2 service skeleton consumes finite LiveCaptureFrame iterables for unit testing. This keeps raw socket capture, JSONL writing, audit writing, status writing, and systemd integration separated into later implementation issues.
+
 The systemd template will call the same module command by instance name:
 
     ecg-parser@eno1.service
