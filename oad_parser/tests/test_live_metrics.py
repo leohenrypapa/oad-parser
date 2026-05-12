@@ -29,6 +29,7 @@ class LiveMetricsTests(unittest.TestCase):
         expected = [
             "non_ipv4_or_non_udp",
             "non_ecg",
+            "ecg_candidates",
             "valid_ecg_payloads",
             "error_records_emitted",
             "detector_alerts",
