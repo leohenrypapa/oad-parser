@@ -211,6 +211,7 @@ The production live path will add:
 - ECG parse warnings remain attached to valid ECG event records as parse_warnings objects with code, message, and parser_stage. Warnings do not convert an event into an ecg_parse_error. LiveMetrics tracks warning count. Audit receives aggregate warning summaries through periodic status, not one audit event per warning by default.
 - Legacy-compatible JSONL records written to /nsm/ecg/ecg-current.json. The active file keeps the .json suffix for legacy/runtime familiarity but uses JSON Lines behavior: one JSON object per line.
 - Rotated closed output files use UTC timestamped JSONL names such as /nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl. Name collisions append a numeric suffix such as -0001.
+- The Sprint 2 rotating writer preserves existing active file content by appending records and rotates only non-empty active files.
 - UTC @timestamp based on packet or event time.
 - JSON null for known fields that exist but cannot be parsed.
 - unknown only for categorical legacy compatibility fields.

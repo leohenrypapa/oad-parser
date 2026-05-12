@@ -32,7 +32,7 @@ This section maps the production live ECG parser MVP requirements to planned imp
 | Run a finite synthetic-frame live service skeleton before raw socket production binding. | Live service, classifier, pipeline, metrics | Sprint 2 service issue | Service tests validate synthetic frames, max_frames smoke limit, injectable sinks, audit/status callbacks, and output drop accounting. |
 | Emit error records for malformed ECG-looking packets. | ECG envelope parser, transformer | #7, #8, Sprint 2 hardening | Malformed ECG-looking fixtures produce ecg_parse_error records without raw payload exposure. |
 | Preserve legacy field names where applicable. | Legacy transformer | #8, Sprint 2 warning policy | Transformer tests validate legacy-compatible field names and attach parse_warnings only to valid event records with warnings. |
-| Write runtime output as JSONL to /nsm/ecg/ecg-current.json. | Output writer | Later writer issue | Writer tests validate one JSON object per line and active file naming despite the .json suffix. |
+| Write runtime output as JSONL to /nsm/ecg/ecg-current.json. | Rotating JSONL writer | Sprint 2 writer issue | Writer tests validate append mode, one JSON object per line, active file naming despite the .json suffix, and existing-content preservation. |
 | Document that ecg-current.json has JSONL behavior. | Operator docs, output docs | Later docs issue | README and operator guide explicitly state one JSON object per line. |
 | Keep CSV disabled for MVP. | Config, output | Live config and writer issues | Config tests confirm output_csv is false by default. |
 | Use UTC @timestamp based on packet or event timestamp. | Records, transformer | Live records and transformer issues | Timestamp tests validate UTC Z behavior where live schema requires it. |
@@ -40,7 +40,7 @@ This section maps the production live ECG parser MVP requirements to planned imp
 | Use unknown only for categorical compatibility fields. | Transformer | #8 | Transformer tests validate unknown is limited to categorical fields such as message_type or site_id. |
 | Use SHA-256 of ECG payload for valid and error ECG records. | Transformer | #8 | Hash tests validate ECG payload hash only, not full frame hash. |
 | Keep detector checks configurable and inline. | Config, detector integration | Later detector issue | Detector integration tests validate alert and alert_details fields. |
-| Rotate active JSONL output by 900 seconds or 512 MB. | Rotating writer | Later writer issue | Writer tests validate time and size rotation triggers and UTC rotated names such as ecg-current-YYYYmmddTHHMMSSZ.jsonl with numeric collision suffixes. |
+| Rotate active JSONL output by 900 seconds or 512 MB. | Rotating JSONL writer | Sprint 2 writer issue | Writer tests validate time and size rotation triggers and UTC rotated names such as ecg-current-YYYYmmddTHHMMSSZ.jsonl with numeric collision suffixes. |
 | Prune closed files older than 12 hours and oldest closed files at 75 percent disk use. | Storage policy | Later storage issue | Mocked storage tests validate age and high-water pruning. |
 | Never delete active output or active audit file. | Storage policy | Later storage issue | Active-file protection tests validate deletion exclusions. |
 | Block writer if pruning cannot lower disk use below high-water threshold. | Storage, service | Later failure behavior issue | Failure behavior tests validate writer_blocked_disk_high and drop counters. |
