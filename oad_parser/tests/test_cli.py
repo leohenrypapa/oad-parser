@@ -63,6 +63,7 @@ class CliTests(unittest.TestCase):
             "inspect-pcap",
             "parse-pcap",
             "capture",
+            "live",
             "decode-cd2-words",
             "extract-ecg-messages",
             "compare-legacy-envelope",
@@ -83,6 +84,7 @@ class CliTests(unittest.TestCase):
         commands = [
             "parse-pcap",
             "capture",
+            "live",
             "extract-ecg-messages",
             "validate",
             "validate-platform",
@@ -102,6 +104,104 @@ class CliTests(unittest.TestCase):
 
                 self.assertEqual(result.returncode, 0)
                 self.assertIn("usage:", result.stdout)
+
+    def test_live_help_documents_smoke_max_frames(self):
+        result = subprocess.run(
+            [sys.executable, "-m", "oad_parser", "live", "--help"],
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--config", result.stdout)
+        self.assertIn("--interface", result.stdout)
+        self.assertIn("--max-frames", result.stdout)
+        self.assertIn("test/smoke", result.stdout)
+
+    def test_live_max_frames_zero_smoke_run_writes_audit_and_status_without_socket(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            config_path = tmp_path / "ecg_conf.ini"
+            output_path = tmp_path / "ecg-current.json"
+            audit_path = tmp_path / "ecg-audit.jsonl"
+            status_path = tmp_path / "ecg-status.json"
+            config_path.write_text(
+                "[Outputs]\n"
+                f"output_json_file = {output_path}\n"
+                "[Live]\n"
+                "interface = eno1\n"
+                "[Audit]\n"
+                f"audit_file = {audit_path}\n"
+                f"status_file = {status_path}\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "oad_parser",
+                    "live",
+                    "--config",
+                    str(config_path),
+                    "--interface",
+                    "eno2",
+                    "--max-frames",
+                    "0",
+                ],
+                cwd=REPO_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+
+            combined_output = result.stdout + result.stderr
+            self.assertEqual(result.returncode, 0, combined_output)
+            self.assertIn("reason=max_frames", result.stdout)
+            self.assertIn("frames=0", result.stdout)
+            self.assertIn("records=0", result.stdout)
+            self.assertIn("interface=eno2", result.stdout)
+            self.assertTrue(audit_path.exists())
+            self.assertTrue(status_path.exists())
+            self.assertFalse(output_path.exists())
+            self.assertEqual(len(audit_path.read_text(encoding="utf-8").splitlines()), 2)
+            self.assertIn('"record_type":"ecg_status"', status_path.read_text(encoding="utf-8"))
+
+    def test_live_invalid_config_fails_cleanly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = Path(tmp) / "bad-live.ini"
+            config_path.write_text(
+                "[Options]\noutput_json = false\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "oad_parser",
+                    "live",
+                    "--config",
+                    str(config_path),
+                    "--max-frames",
+                    "0",
+                ],
+                cwd=REPO_ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+
+            combined_output = result.stdout + result.stderr
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("live JSON output", combined_output)
 
     def test_capture_without_max_frames_fails_before_unbounded_socket_capture(self):
         with tempfile.TemporaryDirectory() as tmp:

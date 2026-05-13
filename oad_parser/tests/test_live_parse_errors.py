@@ -83,6 +83,51 @@ class LiveEcgParseErrorTests(unittest.TestCase):
         self.assertEqual(result.error.code, ECG_ERROR_MESSAGE_BLOCK_TRUNCATED)
         self.assertEqual(result.error.parser_stage, "ecg_message_block")
 
+    def test_minimum_candidate_with_incomplete_block_header_is_error(self):
+        payload = bytearray(20)
+        payload[0:2] = (len(payload) - 16).to_bytes(2, "big")
+        payload[4:7] = b"ZAB"
+        payload[8] = 1
+
+        result = extract_ecg_messages_with_errors(bytes(payload), skip_headers=False)
+
+        self.assertTrue(looks_like_ecg_candidate_payload(bytes(payload)))
+        self.assertTrue(result.is_error)
+        self.assertEqual(result.error.code, ECG_ERROR_MESSAGE_BLOCK_TRUNCATED)
+        self.assertEqual(result.error.parser_stage, "ecg_message_block")
+        self.assertIn("header", result.error.message)
+
+    def test_second_message_block_payload_truncation_is_error(self):
+        payload = bytearray(build_ecg_payload())
+        second_header = bytearray(16)
+        second_header[0:2] = (10).to_bytes(2, "big")
+        second_header[4:8] = b"ST2\x00"
+        second_header[8] = 1
+        payload.extend(second_header)
+        payload[0:2] = (len(payload) - 16).to_bytes(2, "big")
+
+        result = extract_ecg_messages_with_errors(bytes(payload), skip_headers=False)
+
+        self.assertTrue(result.is_error)
+        self.assertEqual(result.error.code, ECG_ERROR_MESSAGE_BLOCK_TRUNCATED)
+        self.assertEqual(result.error.parser_stage, "ecg_message_block")
+        self.assertIn("payload", result.error.message)
+
+    def test_malformed_udp_candidate_preserves_packet_metadata(self):
+        payload = bytearray(build_ecg_payload())
+        payload[0:2] = (999).to_bytes(2, "big")
+        frame = build_ethernet_ipv4_udp_frame(bytes(payload))
+
+        result = extract_ecg_messages_with_errors(frame)
+
+        self.assertTrue(result.is_error)
+        self.assertEqual(result.error.code, ECG_ERROR_LENGTH_MISMATCH)
+        self.assertEqual(result.packet_metadata["source_ip"], "10.1.2.3")
+        self.assertEqual(result.packet_metadata["destination_ip"], "10.4.5.6")
+        self.assertEqual(result.packet_metadata["source_port"], 1000)
+        self.assertEqual(result.packet_metadata["destination_port"], 2000)
+        self.assertIn("ip_total_length", result.packet_metadata)
+
     def test_unknown_message_code_is_warning_not_parse_error(self):
         payload = bytearray(build_ecg_payload())
         payload[24] = 99

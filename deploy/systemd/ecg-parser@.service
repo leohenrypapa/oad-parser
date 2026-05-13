@@ -1,0 +1,22 @@
+[Unit]
+Description=OAD ECG live parser on interface %i
+Documentation=file:/usr/share/doc/oad-parser/systemd-live-parser.md
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target
