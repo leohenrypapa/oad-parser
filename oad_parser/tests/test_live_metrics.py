@@ -13,6 +13,7 @@ class LiveMetricsTests(unittest.TestCase):
             packets_parsed=3,
             ecg_messages_emitted=4,
             malformed_count=5,
+            parse_warnings_count=6,
         )
 
         snapshot = metrics.snapshot()
@@ -22,6 +23,7 @@ class LiveMetricsTests(unittest.TestCase):
         self.assertEqual(snapshot["packets_parsed"], 3)
         self.assertEqual(snapshot["ecg_messages_emitted"], 4)
         self.assertEqual(snapshot["malformed_count"], 5)
+        self.assertEqual(snapshot["parse_warnings_count"], 6)
 
     def test_snapshot_includes_recommended_operational_counters(self):
         snapshot = LiveMetrics().snapshot()
@@ -32,6 +34,7 @@ class LiveMetricsTests(unittest.TestCase):
             "ecg_candidates",
             "valid_ecg_payloads",
             "error_records_emitted",
+            "parse_warnings_count",
             "detector_alerts",
             "bytes_written",
             "files_rotated",

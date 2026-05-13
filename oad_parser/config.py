@@ -238,7 +238,10 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
         config.output_status = parser.getboolean("Options", "output_status", fallback=config.output_status)
 
     if parser.has_section("Live"):
-        config.interface = _get_string(parser, "Live", "interface", config.interface)
+        if parser.has_option("Live", "interface"):
+            config.interface = _optional_string(
+                parser.get("Live", "interface", fallback=None)
+            ) or ""
         config.mode = _get_string(parser, "Live", "mode", config.mode)
         config.rotate_seconds = parser.getint("Live", "rotate_seconds", fallback=config.rotate_seconds)
         config.rotate_max_bytes = parser.getint("Live", "rotate_max_bytes", fallback=config.rotate_max_bytes)

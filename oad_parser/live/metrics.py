@@ -19,6 +19,7 @@ class LiveMetrics:
     packets_parsed: int = 0
     ecg_messages_emitted: int = 0
     malformed_count: int = 0
+    parse_warnings_count: int = 0
 
     non_ipv4_or_non_udp: int = 0
     non_ecg: int = 0
@@ -39,6 +40,7 @@ class LiveMetrics:
             "packets_parsed": self.packets_parsed,
             "ecg_messages_emitted": self.ecg_messages_emitted,
             "malformed_count": self.malformed_count,
+            "parse_warnings_count": self.parse_warnings_count,
             "non_ipv4_or_non_udp": self.non_ipv4_or_non_udp,
             "non_ecg": self.non_ecg,
             "ecg_candidates": self.ecg_candidates,
