@@ -47,7 +47,23 @@ tevv_local:
   stage: tevv
   script:
     - python3 --version
-    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    - |
+      set +e
+      PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+      tevv_rc=$?
+      echo "== TEVV report markdown =="
+      if [ -f reports/tevv/tevv-report.md ]; then
+        cat reports/tevv/tevv-report.md
+      else
+        echo "reports/tevv/tevv-report.md not found"
+      fi
+      echo "== TEVV report JSON =="
+      if [ -f reports/tevv/tevv-report.json ]; then
+        cat reports/tevv/tevv-report.json
+      else
+        echo "reports/tevv/tevv-report.json not found"
+      fi
+      exit "$tevv_rc"
   artifacts:
     when: always
     expire_in: 30 days
