@@ -70,7 +70,7 @@ For local work, use:
 
     /home/yyou/rapid-capabilities-oad-parser/.venv/bin/python
 
-The CI image must provide a compatible Python 3.9.2 interpreter for hard-gated validation. If a CI runner image reports a different patch version, treat that as a CI environment defect before relying on CI release evidence.
+The CI image must provide Python 3.9.2 exactly for hard-gated release validation. If a CI runner image reports a different patch version, treat that as a CI environment defect before relying on CI release evidence.
 
 ## Customer and internal artifact separation
 

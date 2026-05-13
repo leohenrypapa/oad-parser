@@ -15,7 +15,7 @@ Key runtime artifacts:
 
 `/nsm/ecg/ecg-current.json` intentionally uses a `.json` suffix for legacy/customer familiarity while containing append-oriented JSON Lines records.
 
-The internal engineering source pack is separate from the future customer runtime/operator handoff pack. Development-only source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not customer-required operational steps unless explicitly included in a customer package profile.
+The internal engineering source pack is separate from the customer runtime/operator handoff pack. Development-only source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not customer-required operational steps unless explicitly included in a customer package profile.
 
 `oad-parser` is a Python ECG/CD2 parser platform for pcap replay, raw ECG payload inspection, CD2 word/framing validation, corpus regression checks, golden fixtures, and clean customer-safe source-pack handoff. Start with `START_HERE.md` for release scope and reading order.
 
@@ -96,7 +96,7 @@ The source-pack generator is intentionally conservative and excludes:
 
 Minimum:
 
-    Python 3.9.2 or newer
+    Python 3.9.2 for release validation
 
 Recommended customer validation runtime:
 
@@ -202,16 +202,16 @@ The `scripts/` directory contains operator convenience wrappers around the curre
 
 This is a good stopping point for platform handoff if tests pass and the source pack excludes unsafe artifacts. It is not yet a claim of authoritative radar message semantics.
 
-Python 3.9.2 or newer is supported for customer runtime validation.
+Python 3.9.2 for release validation is supported for customer runtime validation.
 
 ## Python 3.9.2 customer handoff notes
 
 - Target runtime validation must be run with Python 3.9.2 before customer handoff.
 - Recommended validation commands:
-  - python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-  - python3.9 -m oad_parser --help
-  - python3.9 -m oad_parser validate-platform
-  - python3.9 -m oad_parser create-source-pack --output /tmp/oad-parser-source-pack.tar.gz
+  - .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
+  - .venv/bin/python -m oad_parser --help
+  - .venv/bin/python -m oad_parser validate-platform
+  - PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
 - The `capture` command requires bounded capture with `--max-frames` or `[capture] max_frames` in config. Continuous capture is not enabled for JSONL handoff output.
 - `validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
 - A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat this as a validation failure until the input format and parser selection are confirmed.

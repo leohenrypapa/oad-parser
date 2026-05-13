@@ -4,7 +4,7 @@
     "name": "oad-parser",
     "profile": "parser-project",
     "language": "Python",
-    "runtime": "Python 3.9.2 or newer",
+    "runtime": "Python 3.9.2 exactly for release validation",
     "purpose": "ECG/CD2 parser platform for pcap replay, raw ECG payload inspection, CD2 validation, corpus checks, golden fixtures, synthetic validation, and customer-safe source-pack handoff",
     "semantic_caveat": "The beacon-candidate decoder is provisional and must not be treated as authoritative radar semantics."
   },

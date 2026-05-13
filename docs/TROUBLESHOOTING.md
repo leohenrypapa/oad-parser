@@ -18,14 +18,14 @@ The quickstart script does not require `.git` metadata and does not use private 
 
 Symptom:
 
-    ERROR: Python 3.9.2 or newer is required
+    ERROR: Python 3.9.2 is required
 
 Fix:
 
     python3.9 --version
-    python3.9 -m oad_parser validate-platform
+    .venv/bin/python -m oad_parser validate-platform
 
-The supported runtime is Python 3.9.2 or newer. In the customer Python 3.9.2 environment, prefer `python3.9` explicitly.
+The release-validation runtime is Python 3.9.2 exactly. In the customer Python 3.9.2 environment, use the approved Python 3.9.2 interpreter explicitly.
 
 ## Not in the repository root
 
@@ -53,8 +53,8 @@ Release-readiness scripts are Git-checkout gates. Extracted source packs intenti
 Use these extraction-safe commands instead:
 
     ./scripts/quickstart_check.sh
-    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-    python3.9 -m oad_parser validate-platform
+    .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
+    .venv/bin/python -m oad_parser validate-platform
 
 ## Missing or invalid input path
 
@@ -72,8 +72,8 @@ Fix:
 
 You can still validate the platform with synthetic non-sensitive samples:
 
-    python3.9 -m oad_parser validate-platform
-    python3.9 -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
+    .venv/bin/python -m oad_parser validate-platform
+    .venv/bin/python -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
 
 Synthetic samples prove parser regression and self-consistency only. They do not prove operational radar semantic correctness.
 

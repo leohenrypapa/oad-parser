@@ -32,7 +32,7 @@ Synthetic samples, golden fixtures, corpus checks, and platform validation prove
 
 Supported runtime:
 
-    Python 3.9.2 or newer
+    Python 3.9.2 for release validation
 
 Confirm you are in the repository folder:
 
@@ -226,7 +226,7 @@ This release is ready for customer handoff as a parser-platform foundation after
 
 It is not a final operational semantic decoder. Semantic expansion requires approved sanitized captures or authoritative message-format references.
 
-Supported runtime: Python 3.9.2 or newer. See `START_HERE.md` for the exact customer handoff validation commands and `docs/TROUBLESHOOTING.md` for common failure recovery.
+Supported release-validation runtime: Python 3.9.2 exactly. See `START_HERE.md` for the exact customer handoff validation commands and `docs/TROUBLESHOOTING.md` for common failure recovery.
 
 ## Live parser operator alignment
 

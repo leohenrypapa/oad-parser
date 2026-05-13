@@ -2,12 +2,12 @@
 
 ## Purpose
 
-This closeout records the final known-good Sprint 2 baseline before Sprint 3 release-hardening and customer-handoff work begins.
+This closeout records the Sprint 2 live parser foundation and the later v0.3.0 release-hardening baseline used for customer-pack-ready handoff planning.
 
 ## Final Sprint 2 baseline
 
-- Main commit: `0277f30`
-- Proposed release tag, not yet created or pushed: `v0.3.0-live-parser-foundation`
+- Release baseline commit: `ec77682`
+- Release tag: `v0.3.0-live-parser-foundation` (created and pushed; targets `ec77682`)
 - Python target: 3.9.2
 - Sprint 2 MRs merged: !10 through !23
 - Sprint 2 implementation issues closed: #22 through #35
@@ -37,7 +37,7 @@ Final source pack copy recorded:
 
 ## Scope boundary
 
-This closeout does not claim target-environment operational acceptance. It records the validated Sprint 2 merged implementation baseline only.
+This closeout does not claim target-environment operational acceptance. It records the validated local engineering and customer-pack-ready release baseline only.
 
 Sprint 2 preserves the existing parser behavior and does not add new radar semantics. The `beacon-candidate` path remains provisional and must not be treated as authoritative radar interpretation.
 
