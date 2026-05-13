@@ -237,6 +237,20 @@ class LiveStoragePolicyTests(unittest.TestCase):
                 disk_critical_percent=75,
             )
 
+    def test_from_config_preserves_configured_audit_and_status_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = LiveParserConfig(
+                output_json_file=str(Path(tmp) / "ecg-current.json"),
+                audit_file=str(Path(tmp) / "custom-audit.jsonl"),
+                status_file=str(Path(tmp) / "custom-status.json"),
+            )
+
+            policy = LiveStoragePolicy.from_config(config)
+
+            self.assertEqual(policy.active_output_path, Path(tmp) / "ecg-current.json")
+            self.assertEqual(policy.audit_path, Path(tmp) / "custom-audit.jsonl")
+            self.assertEqual(policy.status_path, Path(tmp) / "custom-status.json")
+
 
 if __name__ == "__main__":
     unittest.main()

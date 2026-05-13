@@ -72,3 +72,12 @@ Local pcap validation scripts are provided for authorized internal use only. Rep
 - `validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
 - A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat this as a validation failure until the input format and parser selection are confirmed.
 - Source-pack generation rejects included symlinks and excludes local/private capture artifacts by policy. In extracted source packs, tracked-only mode is constrained by SOURCE-PACK-MANIFEST.json; use --include-untracked only for internal local snapshots.
+## Live parser SIEM handoff
+
+For Sprint 2 MVP, Filebeat or Elastic Agent 8.17.3 should collect append-style parser files only:
+
+    /nsm/ecg/ecg-current.json
+    /nsm/ecg/ecg-audit.jsonl
+
+`/nsm/ecg/ecg-status.json` remains local-only for operator inspection. See `docs/ops/filebeat-elastic-agent-handoff.md`.
+

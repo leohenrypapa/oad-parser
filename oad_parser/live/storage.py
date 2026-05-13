@@ -80,6 +80,8 @@ class LiveStoragePolicy:
     ) -> "LiveStoragePolicy":
         return cls(
             active_output_path=config.output_json_file,
+            audit_path=config.audit_file,
+            status_path=config.status_file,
             prune_after_seconds=config.prune_after_seconds,
             disk_high_water_percent=config.disk_high_water_percent,
             disk_critical_percent=config.disk_critical_percent,
