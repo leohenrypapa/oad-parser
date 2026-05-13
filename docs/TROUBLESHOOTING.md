@@ -115,3 +115,23 @@ Contact a maintainer if:
 - You need to interpret `beacon-candidate` fields.
 - You need to share pcap-derived output externally.
 - You are unsure whether data is sanitized.
+
+## Live parser troubleshooting alignment
+
+For Sprint 2 live parser troubleshooting, distinguish parser-owned outputs from SIEM-owned collection:
+
+- Parser active output: `/nsm/ecg/ecg-current.json`
+  - JSON Lines content despite the `.json` suffix.
+- Parser audit output: `/nsm/ecg/ecg-audit.jsonl`
+- Parser local status: `/nsm/ecg/ecg-status.json`
+- Config file: `/etc/oad-parser/ecg_conf.ini`
+- Systemd template: `deploy/systemd/ecg-parser@.service`
+- Instance example: `ecg-parser@eno1.service`
+
+If `ecg-parser@enoX.service` fails on target, check:
+
+- The selected `enoX` interface exists and is a connected ECG interface.
+- The service is running as root or with the required raw-socket capability.
+- `/nsm/ecg` exists and has expected ownership/permissions.
+- `/etc/oad-parser/ecg_conf.ini` points to the intended output paths.
+- Filebeat/Elastic Agent handoff configuration is handled by the SIEM owner and does not belong in this repo.

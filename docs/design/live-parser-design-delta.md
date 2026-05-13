@@ -6,7 +6,7 @@ Related GitLab issue: #1
 
 ## Purpose
 
-This document captures the current repository behavior before adding the production live ECG parser path.
+This document records historical repository behavior from the pre-Sprint 2 live parser design period and is retained as context; the Sprint 2 production live ECG parser path is now implemented.
 
 The live parser work must be added beside the existing bounded parser and capture workflows. Existing PCAP replay, ECG extraction, CD2 helpers, validation, and source-pack behavior must remain backward compatible unless a later issue explicitly changes that behavior.
 
@@ -251,3 +251,20 @@ The source pack should include source code, tests, operator documentation, servi
 ## Issue sequencing note
 
 Issue #1 is documentation and baseline evidence only. It must not implement live parser behavior.
+
+## Sprint 2 final live parser alignment
+
+This document is retained as design history plus alignment context. The Sprint 2 production live parser path is now implemented.
+
+Implemented operator-facing elements include:
+
+- `oad_parser live`
+- `/etc/oad-parser/ecg_conf.ini`
+- `/nsm/ecg/ecg-current.json` JSON Lines active output
+- `/nsm/ecg/ecg-audit.jsonl`
+- `/nsm/ecg/ecg-status.json`
+- `deploy/systemd/ecg-parser@.service`
+- `docs/ops/systemd-live-parser.md`
+- `docs/ops/filebeat-elastic-agent-handoff.md`
+
+Any older text that describes the live command as planned should be read as historical context, superseded by the Sprint 2 implementation and Sprint 3 release-hardening docs.

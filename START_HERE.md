@@ -1,5 +1,26 @@
 # OAD Parser - Start Here
 
+## Customer operator start point
+
+For the Sprint 2 live parser baseline, start with the live parser operator path:
+
+1. Review `USER_MANUAL.md`.
+2. Review `docs/ops/systemd-live-parser.md`.
+3. Review `docs/ops/filebeat-elastic-agent-handoff.md`.
+4. Review `docs/release/sprint-2-closeout.md`.
+5. Review `docs/design/acceptance-test.md` for TEVV gate definitions.
+
+Operational live parser files:
+
+- `/etc/oad-parser/ecg_conf.ini`
+- `/nsm/ecg/ecg-current.json` JSON Lines output, despite the `.json` suffix
+- `/nsm/ecg/ecg-audit.jsonl`
+- `/nsm/ecg/ecg-status.json`
+- `deploy/systemd/ecg-parser@.service`
+- `ecg-parser@eno1.service` through `ecg-parser@eno5.service`, as applicable to connected ECG interfaces
+
+Internal engineering source-pack, corpus, golden-fixture, and AI/dev workflows remain available for maintainers but are not customer-required operational steps.
+
 ## Release purpose
 
 This repository is a Python ECG/CD2 parser-platform foundation for continued OAD parser work. It provides replay, extraction, comparison, corpus regression, golden fixture, synthetic fixture, and source-pack handoff capabilities.

@@ -81,3 +81,21 @@ For Sprint 2 MVP, Filebeat or Elastic Agent 8.17.3 should collect append-style p
 
 `/nsm/ecg/ecg-status.json` remains local-only for operator inspection. See `docs/ops/filebeat-elastic-agent-handoff.md`.
 
+## Customer handoff alignment
+
+The default customer handoff posture is a runtime/operator package, not the broad internal engineering source pack.
+
+Customer-facing operational content should focus on:
+
+- `oad_parser live`
+- `/etc/oad-parser/ecg_conf.ini`
+- `/nsm/ecg/ecg-current.json` JSON Lines output
+- `/nsm/ecg/ecg-audit.jsonl`
+- `/nsm/ecg/ecg-status.json`
+- `deploy/systemd/ecg-parser@.service`
+- `docs/ops/systemd-live-parser.md`
+- `docs/ops/filebeat-elastic-agent-handoff.md`
+
+The internal engineering source pack may retain tests, source-pack logic, corpus/golden-fixture tooling, TEVV automation, and AI/dev context. Those workflows should not be presented as customer-required operator steps.
+
+Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final site-specific version, endpoint, index, credentials, certificates, and deployment configuration must be confirmed by the SIEM owner outside this repo.

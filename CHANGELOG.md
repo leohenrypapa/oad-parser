@@ -1,5 +1,14 @@
 # Changelog
 
+## Sprint 3 Documentation Alignment - Issue #39
+
+- Aligned customer-facing and release-facing docs with the implemented Sprint 2 `oad_parser live` path.
+- Documented `/nsm/ecg/ecg-current.json` as JSON Lines despite the `.json` suffix.
+- Documented `/nsm/ecg/ecg-audit.jsonl`, `/nsm/ecg/ecg-status.json`, `/etc/oad-parser/ecg_conf.ini`, and `deploy/systemd/ecg-parser@.service`.
+- Clarified Filebeat/Elastic Agent handoff boundaries and SIEM owner confirmation requirements.
+- Clarified that internal engineering source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not customer-required operational steps.
+
+
 ## Sprint 2 Closeout - Live Parser Foundation
 
 - Recorded final Sprint 2 merged baseline at `0277f30`.

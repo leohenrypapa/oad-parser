@@ -135,3 +135,17 @@ For AI or developer handoff, provide:
 - the current commit hash
 - a statement that `beacon-candidate` is provisional
 - a statement that no sensitive captures are included
+
+## Sprint 2 release-note alignment
+
+The Sprint 2 live parser foundation is implemented and merged through the release-hardening closeout baseline.
+
+Release-facing highlights:
+
+- `oad_parser live` is implemented.
+- Systemd template support exists at `deploy/systemd/ecg-parser@.service`.
+- Filebeat/Elastic Agent handoff documentation exists at `docs/ops/filebeat-elastic-agent-handoff.md`.
+- Active output is `/nsm/ecg/ecg-current.json`, containing JSON Lines despite the `.json` suffix.
+- Audit output is `/nsm/ecg/ecg-audit.jsonl`.
+- Status output is `/nsm/ecg/ecg-status.json`.
+- Internal engineering source-pack workflows remain separate from future customer runtime/operator package workflows.

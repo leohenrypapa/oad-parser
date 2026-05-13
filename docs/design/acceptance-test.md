@@ -160,3 +160,14 @@ The `target-oracle` profile is available for target-environment context and manu
     .venv/bin/python scripts/run_tevv_suite.py --profile target-oracle --report-dir reports/tevv-target
 
 The runner does not implement customer-pack generation, customer-pack validation, one-hour 6100 PPS mode, or target root/systemd execution. Customer-pack validation remains `skipped` until Issue #40 and Issue #41 are complete. Generated TEVV evidence under `reports/` is not committed by default.
+
+## Documentation alignment validation note
+
+Issue #39 verifies that Sprint 2 documentation alignment is consistent with the TEVV matrix:
+
+- The live parser command is implemented.
+- `/nsm/ecg/ecg-current.json` is documented as JSON Lines despite the `.json` suffix.
+- `/nsm/ecg/ecg-audit.jsonl` and `/nsm/ecg/ecg-status.json` are documented.
+- Systemd template support and Filebeat/Elastic Agent handoff boundaries are documented.
+- Internal engineering source-pack workflows remain separate from future customer runtime/operator package workflows.
+- The customer-pack gate remains planned until Issue #40 and Issue #41.

@@ -227,3 +227,23 @@ This release is ready for customer handoff as a parser-platform foundation after
 It is not a final operational semantic decoder. Semantic expansion requires approved sanitized captures or authoritative message-format references.
 
 Supported runtime: Python 3.9.2 or newer. See `START_HERE.md` for the exact customer handoff validation commands and `docs/TROUBLESHOOTING.md` for common failure recovery.
+
+## Live parser operator alignment
+
+The Sprint 2 implementation includes the production live parser command:
+
+    .venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1
+
+Expected operational files:
+
+- `/nsm/ecg/ecg-current.json`
+  - JSON Lines records despite the `.json` suffix.
+  - Intended for the active parser output handoff.
+- `/nsm/ecg/ecg-audit.jsonl`
+  - Append-only audit JSON Lines.
+- `/nsm/ecg/ecg-status.json`
+  - Local status snapshot, not the primary MVP SIEM collection stream.
+
+Systemd support is provided by `deploy/systemd/ecg-parser@.service`. Instance names use the interface suffix, for example `ecg-parser@eno1.service`.
+
+Target validation may document `eno1` through `eno5`, but pass/fail live validation applies only to connected ECG interfaces. Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption; final version and site configuration must be confirmed by the SIEM owner.
