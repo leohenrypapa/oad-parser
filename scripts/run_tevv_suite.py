@@ -513,7 +513,7 @@ def write_json_report(report_dir: Path, profile: str, gates: List[Dict[str, Any]
             "This runner orchestrates existing local gates and planned/manual target gates.",
             "Generated reports are not committed by default.",
             "No real PCAPs, raw operational payloads, secrets, or runtime outputs are included by this runner.",
-            "Customer-pack validation is skipped until Issue #40 and Issue #41 are complete.",
+'- customer-pack generation and validation run as active gates when `scripts/make_customer_pack.sh` and `scripts/validate_customer_pack.py` are present; otherwise the gate is skipped because a required script is unavailable.',
         ],
     }
 
@@ -585,7 +585,7 @@ def write_markdown_report(report_dir: Path, report: Dict[str, Any]) -> None:
     lines.append("")
     lines.append("## Notes")
     lines.append("")
-    lines.append("- customer-pack validation is intentionally `skipped` until Issue #40 and Issue #41 are complete.")
+    lines.append("- customer-pack generation and validation run as active gates when `scripts/make_customer_pack.sh` and `scripts/validate_customer_pack.py` are present; otherwise the gate is skipped because a required script is unavailable.")
     lines.append("- 6100 PPS synthetic acceptance is local synthetic evidence only.")
     lines.append("- Optional one-hour 6100 PPS acceptance is P1 and not a blocker for initial customer handoff.")
     lines.append("")
