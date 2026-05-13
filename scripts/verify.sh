@@ -1,21 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-PYTHON_BIN="${PYTHON_BIN:-}"
-if [ -z "$PYTHON_BIN" ]; then
-  for candidate in python3.9 python3 python; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      PYTHON_BIN="$candidate"
-      break
-    fi
-  done
-fi
+DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON}"
 
-if [ -z "$PYTHON_BIN" ]; then
-  echo "ERROR: no Python interpreter found. Python 3.9.2 or newer is required." >&2
+if [ ! -x "$PYTHON_BIN" ]; then
+  echo "ERROR: Python interpreter is not executable: $PYTHON_BIN" >&2
+  echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
   exit 1
 fi
 
@@ -23,9 +19,9 @@ mkdir -p reports/tests reports/validation reports/source-pack
 
 "$PYTHON_BIN" - <<'PYVER'
 import sys
-if sys.version_info < (3, 9, 2):
+if sys.version_info[:3] != (3, 9, 2):
     raise SystemExit(
-        "ERROR: Python 3.9.2 or newer is required; found %s.%s.%s"
+        "ERROR: Python 3.9.2 is required; found %s.%s.%s"
         % sys.version_info[:3]
     )
 PYVER
@@ -57,7 +53,7 @@ cat reports/validation/platform-validation.json
 
 echo
 echo "== quickstart check =="
-bash scripts/quickstart_check.sh | tee reports/validation/quickstart-check.txt
+PYTHON_BIN="$PYTHON_BIN" bash scripts/quickstart_check.sh | tee reports/validation/quickstart-check.txt
 
 echo
 echo "== source-pack smoke =="

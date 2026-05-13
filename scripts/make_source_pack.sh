@@ -37,7 +37,7 @@ esac
 
 mkdir -p "$(dirname "$output")"
 
-python3 -m oad_parser create-source-pack --output "$output" --tracked-only
+"$PYTHON_BIN" -m oad_parser create-source-pack --output "$output" --tracked-only
 
 echo
 echo "== source pack =="
@@ -113,7 +113,7 @@ echo "OK: no unsafe source-pack entries"
 echo
 echo "== manifest content check =="
 tar -xOzf "$output" SOURCE-PACK-MANIFEST.json > "$manifest_file"
-python3 - "$manifest_file" <<'PY'
+"$PYTHON_BIN" - "$manifest_file" <<'PY'
 import json
 import re
 import sys

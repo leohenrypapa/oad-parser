@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 OUT="${1:-}"
 if [ -z "$OUT" ]; then
   echo "Usage: $0 /path/to/oad-parser-customer-runtime.tar.gz" >&2
   exit 2
 fi
 
-PY="${PYTHON:-python3}"
+DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+PY="${PYTHON_BIN:-${PYTHON:-$DEFAULT_PYTHON}}"
 
 "$PY" - "$OUT" <<'PY'
 import hashlib

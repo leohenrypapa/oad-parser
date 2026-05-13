@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 usage() {
     cat <<'EOF_USAGE'
 Usage: scripts/quickstart_check.sh [--with-tests]
@@ -36,25 +38,21 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-PYTHON_BIN=""
-for candidate in python3.9 python3 python; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-        PYTHON_BIN="$candidate"
-        break
-    fi
-done
+DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON}"
 
-if [ -z "$PYTHON_BIN" ]; then
-    echo "ERROR: no Python interpreter found. Install Python 3.9.2 or newer." >&2
+if [ ! -x "$PYTHON_BIN" ]; then
+    echo "ERROR: Python interpreter is not executable: $PYTHON_BIN" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
     exit 1
 fi
 
 PY_VERSION="$($PYTHON_BIN -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
 "$PYTHON_BIN" - <<'EOF_PYVER'
 import sys
-if sys.version_info < (3, 9, 2):
+if sys.version_info[:3] != (3, 9, 2):
     raise SystemExit(
-        "ERROR: Python 3.9.2 or newer is required; found %s.%s.%s"
+        "ERROR: Python 3.9.2 is required; found %s.%s.%s"
         % sys.version_info[:3]
     )
 EOF_PYVER
