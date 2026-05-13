@@ -187,6 +187,17 @@ def include_candidate(rel):
         return True
     return False
 
+def get_filesystem_files():
+    files = []
+    for path in repo.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(repo).as_posix()
+        if include_candidate(rel):
+            files.append(rel)
+    return sorted(set(files))
+
+
 def get_tracked_files():
     try:
         result = subprocess.run(
@@ -197,9 +208,15 @@ def get_tracked_files():
             stderr=subprocess.PIPE,
             check=True,
         )
+        files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        if files:
+            return files
+    except FileNotFoundError:
+        return get_filesystem_files()
     except Exception as exc:
         raise SystemExit(f"ERROR: failed to list tracked files with git: {exc}")
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+    return get_filesystem_files()
 
 tracked_files = get_tracked_files()
 
@@ -300,4 +317,8 @@ PY
 echo
 echo "== customer pack =="
 echo "$OUT"
-du -h "$OUT"
+if command -v du >/dev/null 2>&1; then
+  du -h "$OUT"
+else
+  echo "du not available; skipping customer-pack size display"
+fi
