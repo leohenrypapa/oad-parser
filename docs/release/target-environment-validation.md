@@ -1,5 +1,7 @@
 # Target Environment Validation Checklist
 
+- Use `docs/release/target-environment-validation-result-template.md` to record sanitized operator-run results.
+
 This checklist defines target-environment validation for the OAD parser Sprint 2 live parser foundation before customer operational handoff.
 
 This checklist is documentation-only. It does not execute target validation, automate privileged deployment, create site-specific Filebeat/Elastic Agent configuration, change parser/runtime behavior, implement one-hour 6100 PPS mode, or add radar semantics.

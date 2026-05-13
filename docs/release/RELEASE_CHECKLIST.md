@@ -6,6 +6,7 @@ Before executing Sprint 3 release-hardening gates, review:
 
 - `docs/release/sprint-2-closeout.md`
 - `docs/release/ci-cd-release-workflow.md`
+- `docs/release/target-environment-validation-result-template.md`
 
 The closeout records the Sprint 2 live parser foundation and the protected release tag `v0.3.0-live-parser-foundation` at `ec77682`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
 
@@ -74,6 +75,7 @@ Minimum evidence expectations:
 - Customer-pack hygiene result from the generated customer runtime/operator pack and `scripts/validate_customer_pack.py`.
 - Short 6100 PPS synthetic acceptance result.
 - Target-environment checklist result after Oracle Linux Server 9.6 validation is executed.
+- Target-site validation results should be recorded with `docs/release/target-environment-validation-result-template.md` after checklist execution and sanitization review.
 - SIEM handoff confirmation by the SIEM owner.
 
 Evidence handling requirements:
