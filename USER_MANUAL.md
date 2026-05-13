@@ -145,6 +145,24 @@ Valid ECG event records may include `parse_warnings` when the parser can emit th
 
 MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`. `/nsm/ecg/ecg-status.json` is local-only for operators unless a later requirement adds central status ingestion.
 
+`/nsm/ecg/ecg-audit.jsonl` is JSON Lines audit output. `/nsm/ecg/ecg-status.json` is replaced as a single JSON object and is intended for local operator checks, not MVP central ingestion.
+
+Filebeat and Elastic Agent handoff guidance is available at `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection uses append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`.
+
+Synthetic acceptance harness example:
+
+    python3.9 scripts/run_live_acceptance_6100pps.py --duration-seconds 1 --target-pps 6100 --output reports/validation/live-acceptance-6100pps.json
+
+This harness uses synthetic in-memory frames only. It does not replace target-environment one-hour operational acceptance.
+
+Live command smoke example:
+
+    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
+
+The `--max-frames` option is for test and smoke runs only. Do not use it in the production systemd service.
+
+Systemd template documentation is available at `docs/ops/systemd-live-parser.md`. The template service is `deploy/systemd/ecg-parser@.service` and should be installed as `/etc/systemd/system/ecg-parser@.service`.
+
 ## What files are safe to share
 
 Usually safe to share:
