@@ -84,6 +84,9 @@ required_entries=(
   "oad_parser/tests/test_live_metrics.py"
   "oad_parser/tests/test_live_parse_errors.py"
   "oad_parser/tests/test_live_records.py"
+  "deploy/systemd/ecg-parser@.service"
+  "docs/ops/systemd-live-parser.md"
+  "docs/ops/filebeat-elastic-agent-handoff.md"
   "scripts/make_source_pack.sh"
 )
 
