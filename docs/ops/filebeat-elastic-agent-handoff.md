@@ -157,3 +157,9 @@ The parser owns these output files:
   - Local status snapshot; not the primary MVP central collection stream.
 
 Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final version and site-specific configuration must be confirmed by the SIEM owner. Do not commit SIEM endpoints, tokens, certificates, private keys, hostnames, IPs, index names, or other site-specific values.
+
+## Target validation reference
+
+Use `docs/release/target-environment-validation.md` during target handoff.
+
+The parser owns `/nsm/ecg/ecg-current.json`, `/nsm/ecg/ecg-audit.jsonl`, and local `/nsm/ecg/ecg-status.json`. The SIEM owner owns Filebeat/Elastic Agent version confirmation, endpoint, index, certificate, token, pipeline, and deployment configuration. Filebeat/Elastic Agent 8.17.3 remains the expected assumption until the SIEM owner confirms the final site version and configuration.

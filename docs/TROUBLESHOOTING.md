@@ -135,3 +135,9 @@ If `ecg-parser@enoX.service` fails on target, check:
 - `/nsm/ecg` exists and has expected ownership/permissions.
 - `/etc/oad-parser/ecg_conf.ini` points to the intended output paths.
 - Filebeat/Elastic Agent handoff configuration is handled by the SIEM owner and does not belong in this repo.
+
+## Target validation troubleshooting reference
+
+For Oracle Linux Server 9.6 target checks, use `docs/release/target-environment-validation.md`.
+
+Do not commit target logs with site-sensitive details, real PCAPs, raw operational payloads, `/nsm/ecg` runtime outputs, hostnames, IP addresses, SIEM endpoints, tokens, certificates, private keys, index names, customer-specific interface mappings, or unsanitized systemd journal exports.

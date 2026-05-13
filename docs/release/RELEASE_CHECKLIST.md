@@ -145,3 +145,13 @@ The validator must pass before customer handoff. It checks:
 - Manifest file hashes and sizes when present.
 
 The validator inspects entries inside the archive. It does not reject the outer pack path because the pack itself is a `.tar.gz` file.
+
+## Target-environment validation gate
+
+Before customer operational acceptance, complete or explicitly defer the target-environment validation checklist:
+
+    docs/release/target-environment-validation.md
+
+The gate covers Oracle Linux Server 9.6, Python 3.9.2, root runtime/systemd validation, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection for `eno1` through `eno5` as applicable, output file checks, storage behavior validation, and Filebeat/Elastic Agent 8.17.3 SIEM owner confirmation.
+
+Do not commit target logs, runtime outputs, real PCAPs, raw payloads, hostnames, IP addresses, SIEM endpoints, tokens, certificates, private keys, index names, customer-specific interface mappings, or unsanitized systemd journal exports.
