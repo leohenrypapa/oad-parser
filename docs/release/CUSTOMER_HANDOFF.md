@@ -137,3 +137,9 @@ Validate the generated customer runtime/operator pack before handoff:
 The validation report records required-entry checks, forbidden-entry checks, manifest checks, unsafe-artifact checks, limitations, and an overall `status`.
 
 A valid generated customer pack should return exit code 0 and report `"status": "passed"`.
+
+## Target validation checklist reference
+
+Use `docs/release/target-environment-validation.md` for target validation before operational acceptance.
+
+The checklist separates parser-owned `/nsm/ecg` outputs from SIEM-owned Filebeat/Elastic Agent configuration and documents that pass/fail live validation applies only to connected ECG interfaces.

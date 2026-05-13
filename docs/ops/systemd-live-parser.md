@@ -140,3 +140,9 @@ Systemd validation must confirm:
 - `/nsm/ecg/ecg-current.json` is written as JSON Lines despite the `.json` suffix.
 - `/nsm/ecg/ecg-audit.jsonl` is written as audit JSON Lines.
 - `/nsm/ecg/ecg-status.json` is written as the local status snapshot.
+
+## Target-environment validation checklist reference
+
+Use `docs/release/target-environment-validation.md` for the target Oracle Linux Server 9.6 validation checklist.
+
+The checklist covers Python 3.9.2, root runtime, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection, `eno1` through `eno5` examples, `ecg-parser@enoX.service` start/status/stop checks, output file checks, storage behavior validation, and evidence that must not be committed.

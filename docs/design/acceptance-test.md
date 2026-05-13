@@ -184,3 +184,9 @@ The local TEVV profile now generates a customer runtime/operator pack under the 
     .venv/bin/python scripts/validate_customer_pack.py --pack reports/tevv/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/tevv/customer-pack/customer-pack-validation.json
 
 Generated customer-pack evidence remains under `reports/` and is not committed by default.
+
+### Target-environment checklist reference
+
+Issue #42 adds `docs/release/target-environment-validation.md` as the target validation checklist for Oracle Linux Server 9.6, Python 3.9.2, root runtime, systemd, `/nsm/ecg`, connected ECG interface selection, and Filebeat/Elastic Agent handoff confirmation.
+
+The checklist is manual target evidence. Generated or collected target evidence must not be committed unless sanitized and approved.
