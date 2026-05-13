@@ -12,6 +12,16 @@ fi
 DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
 PY="${PYTHON_BIN:-${PYTHON:-$DEFAULT_PYTHON}}"
 
+if [ ! -x "$PY" ]; then
+  if command -v "$PY" >/dev/null 2>&1; then
+    PY="$(command -v "$PY")"
+  else
+    echo "ERROR: Python interpreter is not executable or resolvable on PATH: $PY" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
+    exit 1
+  fi
+fi
+
 "$PY" - "$OUT" <<'PY'
 import hashlib
 import json
@@ -22,6 +32,20 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
 
 out_path = Path(sys.argv[1]).resolve()
 repo = Path.cwd().resolve()
