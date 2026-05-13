@@ -71,3 +71,19 @@ Legacy compatibility output should be optional and map dotted ECS fields to olde
 - `source.port` -> `source_port`
 - `destination.port` -> `destination_port`
 - `observer.interface` -> `interface`
+
+## Sprint 2 live parser I/O alignment
+
+The implemented live parser writes operational outputs under `/nsm/ecg` by default when configured for the target environment:
+
+- `/nsm/ecg/ecg-current.json`
+  - Active parser output.
+  - Contains JSON Lines records even though the file name ends in `.json`.
+- `/nsm/ecg/ecg-audit.jsonl`
+  - Append-only audit JSON Lines.
+- `/nsm/ecg/ecg-status.json`
+  - Local status snapshot.
+
+Config is expected at `/etc/oad-parser/ecg_conf.ini` for target deployment. Systemd execution uses `deploy/systemd/ecg-parser@.service` with instance names such as `ecg-parser@eno1.service`.
+
+This document does not add new radar semantics. `beacon-candidate` remains provisional.

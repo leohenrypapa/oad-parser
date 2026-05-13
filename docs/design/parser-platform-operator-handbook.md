@@ -278,3 +278,18 @@ Use tracked files only:
     python3 -m oad_parser.cli create-source-pack --tracked-only --output dist/source-packs/oad-parser-source-pack.tar.gz
 
 The source pack includes code, tests, config, and design docs. It excludes local scratch files, `.git`, caches, generated reports, packet captures, raw payloads, and archives.
+
+## Sprint 2 operator alignment
+
+Operators should use the implemented `oad_parser live` path for the Sprint 2 live parser baseline.
+
+Target deployment references:
+
+- Config: `/etc/oad-parser/ecg_conf.ini`
+- Active output: `/nsm/ecg/ecg-current.json` JSON Lines output
+- Audit output: `/nsm/ecg/ecg-audit.jsonl`
+- Status output: `/nsm/ecg/ecg-status.json`
+- Systemd template: `deploy/systemd/ecg-parser@.service`
+- Instance pattern: `ecg-parser@<interface>.service`
+
+`eno1` through `eno5` may be documented as expected interface names, but validation passes only for connected ECG interfaces. Filebeat/Elastic Agent handoff is bounded to parser-owned output files and requires SIEM owner confirmation for final site config.

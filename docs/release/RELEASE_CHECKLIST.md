@@ -97,3 +97,16 @@ Expected generated evidence:
 - `reports/tevv/tevv-evidence-manifest.json`
 
 The TEVV runner is an orchestration tool for local gates and planned/manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, SIEM owner handoff confirmation, customer-pack generation, or customer-pack validation.
+
+## Sprint 2 documentation alignment gate
+
+For Issue #39, customer-facing and release-facing docs must reflect the final Sprint 2 live parser implementation:
+
+- `oad_parser live` is implemented.
+- `/nsm/ecg/ecg-current.json` contains JSON Lines despite the `.json` suffix.
+- `/nsm/ecg/ecg-audit.jsonl` and `/nsm/ecg/ecg-status.json` are documented.
+- `deploy/systemd/ecg-parser@.service` and `ecg-parser@<interface>.service` usage are documented.
+- `/etc/oad-parser/ecg_conf.ini` is documented as the target config path.
+- Filebeat/Elastic Agent handoff boundaries are documented, with final SIEM version/site config confirmed by the SIEM owner.
+- Internal engineering source pack workflows remain separate from the future customer runtime/operator handoff pack.
+- Source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not required customer operational steps.

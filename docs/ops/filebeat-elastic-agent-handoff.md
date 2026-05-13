@@ -144,3 +144,16 @@ Before enabling central collection, verify:
     /nsm/ecg/ecg-status.json is not configured for MVP central collection
     downstream Logstash ownership and index routing are documented outside this repository
     no secrets or site-specific endpoints are committed to this repository
+
+## Sprint 2 SIEM handoff boundary
+
+The parser owns these output files:
+
+- `/nsm/ecg/ecg-current.json`
+  - JSON Lines active output despite the `.json` suffix.
+- `/nsm/ecg/ecg-audit.jsonl`
+  - Audit JSON Lines.
+- `/nsm/ecg/ecg-status.json`
+  - Local status snapshot; not the primary MVP central collection stream.
+
+Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final version and site-specific configuration must be confirmed by the SIEM owner. Do not commit SIEM endpoints, tokens, certificates, private keys, hostnames, IPs, index names, or other site-specific values.

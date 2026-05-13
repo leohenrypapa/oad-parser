@@ -1,5 +1,22 @@
 # OAD Parser
 
+## Current live parser handoff posture
+
+The Sprint 2 live parser is implemented and the default customer-facing operational path is `oad_parser live`.
+
+Key runtime artifacts:
+
+- Config: `/etc/oad-parser/ecg_conf.ini`
+- Active JSON Lines output: `/nsm/ecg/ecg-current.json`
+- Audit JSON Lines output: `/nsm/ecg/ecg-audit.jsonl`
+- Local status snapshot: `/nsm/ecg/ecg-status.json`
+- Systemd template: `deploy/systemd/ecg-parser@.service`
+- SIEM handoff guide: `docs/ops/filebeat-elastic-agent-handoff.md`
+
+`/nsm/ecg/ecg-current.json` intentionally uses a `.json` suffix for legacy/customer familiarity while containing append-oriented JSON Lines records.
+
+The internal engineering source pack is separate from the future customer runtime/operator handoff pack. Development-only source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not customer-required operational steps unless explicitly included in a customer package profile.
+
 `oad-parser` is a Python ECG/CD2 parser platform for pcap replay, raw ECG payload inspection, CD2 word/framing validation, corpus regression checks, golden fixtures, and clean customer-safe source-pack handoff. Start with `START_HERE.md` for release scope and reading order.
 
 ## Current baseline

@@ -80,3 +80,18 @@ The TEVV matrix links release gates to existing implementation and validation ar
 | Customer-pack hygiene | `docs/design/acceptance-test.md` | Planned `scripts/make_customer_pack.sh`, planned `scripts/validate_customer_pack.py` | Planned gate for Issue #40 and Issue #41. |
 | 6100 PPS synthetic acceptance | `docs/design/acceptance-test.md` | `scripts/run_live_acceptance_6100pps.py` | Covered by short synthetic acceptance gate. |
 | Optional one-hour 6100 PPS acceptance | `docs/design/acceptance-test.md` | `scripts/run_live_acceptance_6100pps.py` future optional mode | Optional P1 target gate; not an initial handoff blocker. |
+
+## Sprint 2 documentation alignment addendum
+
+Issue #39 aligns customer-facing and release-facing documentation to the implemented Sprint 2 live parser baseline.
+
+| Documentation requirement | Aligned references | Status |
+|---|---|---|
+| `oad_parser live` is implemented | `README.md`, `START_HERE.md`, `USER_MANUAL.md`, ops docs | Implemented and documented. |
+| `/nsm/ecg/ecg-current.json` JSON Lines behavior | `README.md`, `USER_MANUAL.md`, `docs/design/input-output-contract.md`, ops docs | Documented as JSON Lines despite `.json` suffix. |
+| `/nsm/ecg/ecg-audit.jsonl` and `/nsm/ecg/ecg-status.json` | Customer-facing and ops docs | Documented. |
+| Systemd template service | `deploy/systemd/ecg-parser@.service`, `docs/ops/systemd-live-parser.md` | Documented. |
+| `/etc/oad-parser/ecg_conf.ini` target config | Customer-facing and ops docs | Documented. |
+| Filebeat/Elastic Agent handoff boundary | `docs/ops/filebeat-elastic-agent-handoff.md` | Documented, with SIEM owner confirmation required. |
+| Internal engineering source pack versus customer handoff pack | Release and handoff docs | Documented as separate packaging profiles. |
+| Provisional beacon-candidate scope | Customer-facing and design docs | Preserved as provisional, not authoritative radar semantics. |

@@ -126,3 +126,17 @@ After installation, use:
 For a non-production smoke run without systemd:
 
     python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
+
+## Sprint 2 target validation boundary
+
+The systemd template service is implemented at `deploy/systemd/ecg-parser@.service`.
+
+Target validation may document `eno1` through `eno5`, but pass/fail validation applies only to connected ECG interfaces. For example, `ecg-parser@eno1.service` is valid only when `eno1` is the selected connected ECG interface.
+
+Systemd validation must confirm:
+
+- `/etc/oad-parser/ecg_conf.ini` exists and is site-appropriate.
+- `/nsm/ecg` exists with correct ownership and permissions.
+- `/nsm/ecg/ecg-current.json` is written as JSON Lines despite the `.json` suffix.
+- `/nsm/ecg/ecg-audit.jsonl` is written as audit JSON Lines.
+- `/nsm/ecg/ecg-status.json` is written as the local status snapshot.
