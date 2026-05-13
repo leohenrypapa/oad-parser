@@ -142,3 +142,21 @@ Example evidence paths for future automation:
 - `reports/siem/handoff-validation.md`
 
 These paths are generated artifacts and are not committed by default.
+
+### TEVV runner usage
+
+Issue #38 adds the local TEVV suite runner:
+
+    .venv/bin/python scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+
+The runner emits:
+
+- `reports/tevv/tevv-report.json`
+- `reports/tevv/tevv-report.md`
+- `reports/tevv/tevv-evidence-manifest.json`
+
+The `target-oracle` profile is available for target-environment context and manual/checklist gates:
+
+    .venv/bin/python scripts/run_tevv_suite.py --profile target-oracle --report-dir reports/tevv-target
+
+The runner does not implement customer-pack generation, customer-pack validation, one-hour 6100 PPS mode, or target root/systemd execution. Customer-pack validation remains `skipped` until Issue #40 and Issue #41 are complete. Generated TEVV evidence under `reports/` is not committed by default.

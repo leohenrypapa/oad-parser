@@ -48,6 +48,11 @@
       "command": "python3 scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-smoke.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json",
       "enforcement": "repo-enforced",
       "summary": "Validate source-pack manifest reviewability, hashes, exclusions, and manual controls."
+    },
+    "tevv_suite_local": {
+      "command": "python3 scripts/run_tevv_suite.py --profile local --report-dir reports/tevv",
+      "enforcement": "repo-enforced",
+      "summary": "Run the local TEVV release-hardening suite and emit JSON, Markdown, and evidence-manifest reports."
     }
   },
   "evidence_outputs": [
@@ -79,6 +84,21 @@
     {
       "path": "reports/source-pack/source-pack-manifest-check.json",
       "producer": "scripts/check_source_pack_manifest.py",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/tevv/tevv-report.json",
+      "producer": "scripts/run_tevv_suite.py",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/tevv/tevv-report.md",
+      "producer": "scripts/run_tevv_suite.py",
+      "committed_by_default": false
+    },
+    {
+      "path": "reports/tevv/tevv-evidence-manifest.json",
+      "producer": "scripts/run_tevv_suite.py",
       "committed_by_default": false
     }
   ],
@@ -117,6 +137,11 @@
       "path": "docs/release/STANDARDS_ADOPTION_CHECKLIST.md",
       "category": "release-readiness",
       "enforcement": "manual-review"
+    },
+    {
+      "path": "scripts/run_tevv_suite.py",
+      "category": "tevv-evidence",
+      "enforcement": "repo-enforced"
     }
   ],
   "repo_enforced_controls": [
@@ -128,7 +153,8 @@
     "quickstart validation without private captures",
     "source-pack smoke generation",
     "source-pack manifest schema and safety checks",
-    "customer-safe source-pack exclusions"
+    "customer-safe source-pack exclusions",
+    "TEVV suite local profile orchestration"
   ],
   "manual_platform_controls": [
     "Replace CODEOWNERS placeholder groups with approved GitLab users or groups",

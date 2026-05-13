@@ -83,3 +83,17 @@ Evidence handling requirements:
 - Do not claim Oracle Linux Server 9.6 target validation has passed until target evidence exists.
 - Keep the internal engineering source pack separate from the customer runtime/operator handoff package.
 - Treat optional one-hour 6100 PPS acceptance as P1 and not a blocker for the initial customer handoff package.
+
+## TEVV suite runner gate
+
+For the local release-hardening evidence bundle, run:
+
+    .venv/bin/python scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+
+Expected generated evidence:
+
+- `reports/tevv/tevv-report.json`
+- `reports/tevv/tevv-report.md`
+- `reports/tevv/tevv-evidence-manifest.json`
+
+The TEVV runner is an orchestration tool for local gates and planned/manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, SIEM owner handoff confirmation, customer-pack generation, or customer-pack validation.
