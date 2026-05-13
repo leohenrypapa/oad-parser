@@ -129,3 +129,19 @@ Minimum manual checks until Issue #41 adds the customer-pack validator:
 - Generated reports, runtime outputs, archives, PCAPs, raw payloads, secrets, and site-specific values are absent.
 
 The customer runtime/operator pack is separate from the internal engineering source pack. Do not replace or degrade `scripts/make_source_pack.sh` or `oad_parser create-source-pack`.
+
+## Customer-pack validation gate
+
+Issue #41 adds automated customer-pack validation:
+
+    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+
+The validator must pass before customer handoff. It checks:
+
+- Required runtime/operator entries.
+- Forbidden internal/dev-only entries and prefixes.
+- Forbidden entry suffixes for PCAPs, raw payloads, generated reports, archives, and secret-like files.
+- `CUSTOMER-PACK-MANIFEST.json` presence and parseability.
+- Manifest file hashes and sizes when present.
+
+The validator inspects entries inside the archive. It does not reject the outer pack path because the pack itself is a `.tar.gz` file.
