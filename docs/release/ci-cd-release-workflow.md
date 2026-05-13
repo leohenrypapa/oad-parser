@@ -34,6 +34,7 @@ Recommended hotfix pattern:
 | Default branch | `verify`, `tevv_local`, `customer_pack`, `source_pack` | Preserve release-readiness on `main` | Yes |
 | Protected `v*` tag | `verify`, `tevv_local`, `customer_pack`, `source_pack`, `release_artifacts` | Publish release evidence and package artifacts | Yes |
 | Web pipeline | `verify` | Manual baseline validation | Yes for that pipeline only |
+| Scheduled pipeline | `verify`, `tevv_local`, `customer_pack`, `source_pack` | Periodic drift check for runner/image/package behavior | Yes for that scheduled pipeline only |
 
 ## Job summary
 
@@ -44,6 +45,12 @@ Recommended hotfix pattern:
 | `customer_pack` | `package` | Generates and validates the customer runtime/operator pack | Customer pack tarball and validation JSON | 30 days |
 | `source_pack` | `package` | Generates and validates the internal engineering source pack | Source pack tarball and manifest validation JSON | 30 days |
 | `release_artifacts` | `release` | Runs tag-only release evidence generation for `v*` tags | Release checksums, customer pack, source pack, TEVV reports, validation reports, JUnit | 1 year |
+
+## Scheduled drift-check behavior
+
+Optional scheduled pipelines can be configured on the protected default branch to run the same local engineering/package-readiness gates used for merge request and default-branch validation.
+
+Scheduled pipelines are not target-site operational validation. They detect CI runner, image, package, and validation drift.
 
 ## Release artifact behavior
 

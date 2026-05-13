@@ -112,6 +112,7 @@ Minimum CI/CD expectations:
 
 - Merge request and default branch pipelines run `verify`, `tevv_local`, `customer_pack`, and `source_pack`.
 - Protected `v*` tag pipelines run `release_artifacts` and publish release checksums, TEVV reports, customer-pack artifacts, and source-pack artifacts.
+- Optional scheduled pipelines run the same local engineering and package-readiness drift checks on the protected default branch.
 - CI/CD artifacts support local engineering and package-readiness evidence only.
 - Target-site operational acceptance remains pending until target evidence exists.
 

@@ -12,6 +12,8 @@ workflow:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
     - when: never
 
 verify:
@@ -47,6 +49,7 @@ tevv_local:
       - reports/source-pack/
       - reports/customer-pack/
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
@@ -65,6 +68,7 @@ customer_pack:
       - reports/customer-pack/oad-parser-customer-runtime.tar.gz
       - reports/customer-pack/customer-pack-validation.json
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
@@ -83,6 +87,7 @@ source_pack:
       - reports/source-pack/oad-parser-source-pack.tar.gz
       - reports/source-pack/source-pack-manifest-check.json
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
