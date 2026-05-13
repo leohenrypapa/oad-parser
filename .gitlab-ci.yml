@@ -3,6 +3,7 @@ stages:
 
   - tevv
   - package
+  - release
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
@@ -85,3 +86,32 @@ source_pack:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
+
+release_artifacts:
+  stage: release
+  script:
+    - python3 --version
+    - test -n "$CI_COMMIT_TAG"
+    - mkdir -p reports/release reports/customer-pack reports/source-pack reports/tevv
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz --output-json reports/customer-pack/customer-pack-validation-${CI_COMMIT_TAG}.json
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz --output-json reports/source-pack/source-pack-manifest-check-${CI_COMMIT_TAG}.json
+    - sha256sum reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz > reports/release/SHA256SUMS-${CI_COMMIT_TAG}.txt
+  artifacts:
+    when: always
+    expire_in: 1 year
+    reports:
+      junit: reports/tests/junit.xml
+    paths:
+      - reports/release/
+      - reports/customer-pack/oad-parser-customer-runtime-*.tar.gz
+      - reports/customer-pack/customer-pack-validation-*.json
+      - reports/source-pack/oad-parser-source-pack-*.tar.gz
+      - reports/source-pack/source-pack-manifest-check-*.json
+      - reports/tevv/
+      - reports/tests/junit.xml
+      - reports/validation/
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9].*/'
