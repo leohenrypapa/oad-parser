@@ -46,6 +46,26 @@ Recommended hotfix pattern:
 | `source_pack` | `package` | Generates and validates the internal engineering source pack | Source pack tarball and manifest validation JSON | 30 days |
 | `release_artifacts` | `release` | Runs tag-only release evidence generation for `v*` tags | Release checksums, customer pack, source pack, TEVV reports, validation reports, JUnit | 1 year |
 
+## CI image and Python runtime behavior
+
+All GitLab CI jobs use the pinned Iron Bank Python 3.9 image as the default job image:
+
+    registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c
+
+This prevents package and TEVV jobs from falling back to a runner default image that may not include `python3`.
+
+Local release validation still requires Python 3.9.2 exactly. GitLab CI may report a newer Python 3.9 patch version from the pinned image. CI jobs set `OAD_ALLOW_CI_PY39_PATCH_DRIFT=1` so CI accepts Python 3.9.x patch-level drift while preserving the local 3.9.2 release-validation requirement.
+
+The CI scripts must resolve command-name interpreters such as `python3` through `PATH`. This supports fresh GitLab runner workspaces where the repo virtual environment path does not exist.
+
+## Customer-pack and source-pack CI behavior
+
+Customer-pack generation and validation run as CI package gates. Customer-pack generation must not depend on a `git` binary being available inside the CI image. If `git ls-files` is unavailable, the customer-pack generator uses a filtered filesystem traversal and the same customer-safe inclusion and exclusion policy.
+
+Source-pack generation continues to use the repo Python interpreter selected by `PYTHON_BIN` and validates the generated source pack with `scripts/check_source_pack_manifest.py`.
+
+Customer-pack and source-pack CI artifacts are package-readiness evidence only. They do not claim Oracle Linux Server 9.6 target validation, root/systemd validation, connected ECG interface validation, SIEM owner confirmation, or target-site operational acceptance.
+
 ## Scheduled drift-check behavior
 
 Optional scheduled pipelines can be configured on the protected default branch to run the same local engineering/package-readiness gates used for merge request and default-branch validation.
@@ -77,7 +97,7 @@ For local work, use:
 
     /home/yyou/rapid-capabilities-oad-parser/.venv/bin/python
 
-Local release validation must use Python 3.9.2 exactly. GitLab CI uses the pinned Iron Bank `python39` image and may report a newer Python 3.9 patch version; CI jobs set `OAD_ALLOW_CI_PY39_PATCH_DRIFT=1` so CI validates Python 3.9.x behavior without weakening the local 3.9.2 release-validation requirement.
+See `CI image and Python runtime behavior` below for the CI/local Python boundary.
 
 ## Customer and internal artifact separation
 

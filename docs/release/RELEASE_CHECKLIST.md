@@ -104,6 +104,25 @@ Expected generated evidence:
 
 The TEVV runner is an orchestration tool for local gates and manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, or SIEM owner handoff confirmation.
 
+## MR pre-merge CI evidence gate
+
+Before merging release-hardening CI/CD changes to `main`, confirm the merge request pipeline passed these jobs on the final source branch HEAD:
+
+- `verify`
+- `tevv_local`
+- `customer_pack`
+- `source_pack`
+
+Confirm the following before merge:
+
+- CI jobs use the pinned Iron Bank Python 3.9 image.
+- CI sets `OAD_ALLOW_CI_PY39_PATCH_DRIFT=1` only for CI Python 3.9.x patch-level drift.
+- Local release validation remains pinned to Python 3.9.2 exactly.
+- Customer-pack generation does not require `git` inside the CI image.
+- Source-pack generation and manifest validation pass.
+- CI artifacts are treated as local engineering and package-readiness evidence only.
+- Target-site operational acceptance is not claimed.
+
 ## CI/CD release workflow gate
 
 Review `docs/release/ci-cd-release-workflow.md` before release packaging or protected tag review.
