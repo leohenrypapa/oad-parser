@@ -4,6 +4,9 @@ stages:
   - tevv
   - package
   - release
+variables:
+  PYTHON_BIN: "python3"
+
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
@@ -21,7 +24,8 @@ verify:
   image:
     name: "registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c"
   script:
-    - bash scripts/verify.sh
+    - python3 --version
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/verify.sh
   artifacts:
     when: always
     expire_in: 14 days
@@ -38,7 +42,7 @@ tevv_local:
   stage: tevv
   script:
     - python3 --version
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
   artifacts:
     when: always
     expire_in: 30 days
@@ -60,7 +64,7 @@ customer_pack:
     - python3 --version
     - mkdir -p reports/customer-pack
     - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime.tar.gz
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/customer-pack/customer-pack-validation.json
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/customer-pack/customer-pack-validation.json
   artifacts:
     when: always
     expire_in: 30 days
@@ -78,8 +82,8 @@ source_pack:
   script:
     - python3 --version
     - mkdir -p reports/source-pack
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack.tar.gz
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json
   artifacts:
     when: always
     expire_in: 30 days
@@ -98,11 +102,11 @@ release_artifacts:
     - python3 --version
     - test -n "$CI_COMMIT_TAG"
     - mkdir -p reports/release reports/customer-pack reports/source-pack reports/tevv
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
     - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz --output-json reports/customer-pack/customer-pack-validation-${CI_COMMIT_TAG}.json
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz
-    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz --output-json reports/source-pack/source-pack-manifest-check-${CI_COMMIT_TAG}.json
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz --output-json reports/customer-pack/customer-pack-validation-${CI_COMMIT_TAG}.json
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz --output-json reports/source-pack/source-pack-manifest-check-${CI_COMMIT_TAG}.json
     - sha256sum reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz > reports/release/SHA256SUMS-${CI_COMMIT_TAG}.txt
   artifacts:
     when: always
