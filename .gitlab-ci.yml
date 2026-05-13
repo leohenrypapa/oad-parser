@@ -2,6 +2,7 @@ stages:
   - verify
 
   - tevv
+  - package
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
@@ -44,6 +45,24 @@ tevv_local:
       - reports/validation/
       - reports/source-pack/
       - reports/customer-pack/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+customer_pack:
+  stage: package
+  script:
+    - python3 --version
+    - mkdir -p reports/customer-pack
+    - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime.tar.gz
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/customer-pack/customer-pack-validation.json
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/customer-pack/oad-parser-customer-runtime.tar.gz
+      - reports/customer-pack/customer-pack-validation.json
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
