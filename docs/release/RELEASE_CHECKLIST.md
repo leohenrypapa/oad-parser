@@ -1,5 +1,14 @@
 # Release Checklist
 
+## Sprint 2 closeout reference
+
+Before executing Sprint 3 release-hardening gates, review:
+
+- `docs/release/sprint-2-closeout.md`
+
+The closeout records the final Sprint 2 merged baseline at `0277f30`, the proposed but uncreated tag `v0.3.0-live-parser-foundation`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
+
+
 ## Scope gate
 
 - Release is described as a parser-platform foundation.
