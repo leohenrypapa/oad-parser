@@ -67,3 +67,21 @@ customer_pack:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
+
+source_pack:
+  stage: package
+  script:
+    - python3 --version
+    - mkdir -p reports/source-pack
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack.tar.gz
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/source-pack/oad-parser-source-pack.tar.gz
+      - reports/source-pack/source-pack-manifest-check.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
