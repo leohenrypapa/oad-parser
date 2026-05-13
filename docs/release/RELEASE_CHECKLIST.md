@@ -57,3 +57,29 @@ Run from the repository root:
 - `standards-manifest.json` indexes repo-local commands, generated evidence, key files, and manual/platform controls.
 - GitLab settings for protected main, protected v* tags, MR approvals, CODEOWNERS approval, passing pipelines, protected/masked variables, approved Registry1 pinned CI image, and release restrictions are manual/platform controls.
 - Generated `reports/` evidence is attached to controlled review or release records when required; it is not committed by default.
+
+## TEVV evidence requirements
+
+Before customer handoff, release evidence should be organized by the TEVV matrix in `docs/design/acceptance-test.md`.
+
+Minimum evidence expectations:
+
+- Local compile/syntax check result.
+- Full unit test result.
+- CLI compatibility result for `oad_parser` and `oad_parser live`.
+- Platform validation JSON showing `"passed": true`.
+- Static validation for systemd and Filebeat/Elastic handoff documentation.
+- Internal source-pack hygiene result.
+- Customer-pack hygiene result after the customer pack generator and validator exist.
+- Short 6100 PPS synthetic acceptance result.
+- Target-environment checklist result after Oracle Linux Server 9.6 validation is executed.
+- SIEM handoff confirmation by the SIEM owner.
+
+Evidence handling requirements:
+
+- Generated evidence under `reports/` is not committed by default.
+- Target evidence must be reviewed for site-sensitive values before sharing.
+- Do not commit real PCAPs, raw operational payloads, secrets, local runtime outputs, hostnames, IPs, tokens, certificates, keys, or site-specific SIEM values.
+- Do not claim Oracle Linux Server 9.6 target validation has passed until target evidence exists.
+- Keep the internal engineering source pack separate from the customer runtime/operator handoff package.
+- Treat optional one-hour 6100 PPS acceptance as P1 and not a blocker for the initial customer handoff package.

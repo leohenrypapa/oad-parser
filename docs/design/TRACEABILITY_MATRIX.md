@@ -53,3 +53,30 @@ This section maps the production live ECG parser MVP requirements to planned imp
 | Provide sanitized 6100 PPS best-effort acceptance harness. | Synthetic acceptance script, service, metrics, docs | Sprint 2 acceptance issue | Harness tests validate synthetic-only report schema, target PPS fields, counters, warning/malformed accounting, no PCAP or operational payload use, and documented limitations for Oracle Linux Server 9.6 target evidence. |
 | Add 6100 PPS peak one-hour acceptance path. | Benchmark, reports | Later benchmark issue | Benchmark command and acceptance report capture received, dropped, parsed, emitted, and malformed counters. |
 | Avoid real PCAP, raw operational payloads, secrets, and site-sensitive artifacts in repo. | Fixtures, source-pack, docs | #1 and later source-pack issue | Source-pack tests and docs maintain sanitized artifact policy. |
+
+## Sprint 3 TEVV coverage addendum
+
+Issue #37 adds release-hardening TEVV coverage in `docs/design/acceptance-test.md`.
+
+The TEVV matrix links release gates to existing implementation and validation areas without changing parser/runtime behavior or adding radar semantics.
+
+| Coverage area | Primary TEVV reference | Implementation or artifact references | Status |
+|---|---|---|---|
+| Compile/syntax checks | `docs/design/acceptance-test.md` | `oad_parser/`, `scripts/` | Covered by local/CI gate. |
+| Unit tests | `docs/design/acceptance-test.md` | `oad_parser/tests/` | Covered by local/CI gate. |
+| CLI compatibility | `docs/design/acceptance-test.md` | `oad_parser/cli.py`, `oad_parser/__main__.py` | Covered by local/CI gate. |
+| Config validation | `docs/design/acceptance-test.md` | `config/ecg_conf.example.ini`, `oad_parser/config.py` | Covered locally; target config remains a release-hardening gate. |
+| Parser correctness | `docs/design/acceptance-test.md` | `oad_parser/parsers/`, `oad_parser/transformers/legacy_ecg.py` | Covered by synthetic platform validation. |
+| Malformed ECG handling | `docs/design/acceptance-test.md` | `oad_parser/tests/test_live_parse_errors.py` and related tests | Covered by local tests. |
+| JSONL output contract | `docs/design/acceptance-test.md` | `oad_parser/live/writer.py`, `oad_parser/live/audit.py` | Covered locally; target output path validation remains pending. |
+| Null/unknown policy | `docs/design/acceptance-test.md` | `oad_parser/transformers/legacy_ecg.py` | Covered by transformer and contract tests. |
+| SHA-256 ECG payload hash policy | `docs/design/acceptance-test.md` | `oad_parser/transformers/legacy_ecg.py` | Covered by local tests. |
+| Non-ECG drop/count behavior | `docs/design/acceptance-test.md` | `oad_parser/live/classifier.py`, `oad_parser/live/metrics.py`, `oad_parser/live/pipeline.py` | Covered by local tests. |
+| Storage rotation/pruning/high-water/critical threshold | `docs/design/acceptance-test.md` | `oad_parser/live/storage.py`, `oad_parser/live/writer.py`, `oad_parser/live/service.py` | Covered locally; target disk behavior remains pending. |
+| Audit/status behavior | `docs/design/acceptance-test.md` | `oad_parser/live/audit.py`, `oad_parser/live/service.py` | Covered locally; target output validation remains pending. |
+| Systemd template static validation | `docs/design/acceptance-test.md` | `deploy/systemd/ecg-parser@.service`, `docs/ops/systemd-live-parser.md` | Static gate covered; root/systemd target validation remains pending. |
+| Filebeat/Elastic handoff docs | `docs/design/acceptance-test.md` | `docs/ops/filebeat-elastic-agent-handoff.md` | Static doc gate covered; SIEM owner confirmation remains pending. |
+| Source-pack hygiene | `docs/design/acceptance-test.md` | `oad_parser/source_pack.py`, `scripts/check_source_pack_manifest.py` | Covered by internal engineering source-pack gate. |
+| Customer-pack hygiene | `docs/design/acceptance-test.md` | Planned `scripts/make_customer_pack.sh`, planned `scripts/validate_customer_pack.py` | Planned gate for Issue #40 and Issue #41. |
+| 6100 PPS synthetic acceptance | `docs/design/acceptance-test.md` | `scripts/run_live_acceptance_6100pps.py` | Covered by short synthetic acceptance gate. |
+| Optional one-hour 6100 PPS acceptance | `docs/design/acceptance-test.md` | `scripts/run_live_acceptance_6100pps.py` future optional mode | Optional P1 target gate; not an initial handoff blocker. |
