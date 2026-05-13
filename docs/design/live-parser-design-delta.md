@@ -196,6 +196,8 @@ The Sprint 2 live capture adapter produces LiveCaptureFrame objects with interfa
 
 The Sprint 2 live CLI command loads LiveParserConfig, accepts --interface as a config override, uses --max-frames for test/smoke runs, and wires the capture adapter, service skeleton, rotating JSONL writer, audit JSONL writer, and local status writer together. A --max-frames 0 smoke run validates config and audit/status output without opening a raw socket.
 
+The Sprint 2 systemd template is `deploy/systemd/ecg-parser@.service`. It runs `/usr/bin/python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i` as root, uses `Restart=on-failure`, and applies restart limits to avoid tight restart loops.
+
 The systemd template will call the same module command by instance name:
 
     ecg-parser@eno1.service
@@ -225,6 +227,10 @@ The production live path will add:
 - The Sprint 2 storage policy only prunes closed rotated output files matching the active output prefix. It protects the active output file, active audit file, active status file, and unrelated operator files.
 - Audit JSONL and local status JSON outputs. MVP Filebeat/Elastic Agent handoff collects append-style files only: /nsm/ecg/ecg-current.json and /nsm/ecg/ecg-audit.jsonl. /nsm/ecg/ecg-status.json remains local-only for operators.
 - The Sprint 2 audit/status writer appends audit events to ecg-audit.jsonl and replaces ecg-status.json as one local JSON object for operator inspection.
+
+The Sprint 2 Filebeat/Elastic handoff document is `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection is limited to append-style `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`; `/nsm/ecg/ecg-status.json` remains local-only.
+
+The Sprint 2 acceptance harness is `scripts/run_live_acceptance_6100pps.py`. It provides sanitized synthetic evidence for the 6100 PPS best-effort target and explicitly does not replace one-hour operational acceptance on Oracle Linux Server 9.6 target hardware.
 - 6100 PPS peak acceptance evidence.
 
 ## Source-pack and artifact policy
