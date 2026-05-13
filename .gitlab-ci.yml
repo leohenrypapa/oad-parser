@@ -1,6 +1,7 @@
 stages:
   - verify
 
+  - tevv
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
@@ -28,3 +29,22 @@ verify:
       - reports/validation/
       - reports/source-pack/source-pack-result.json
       - reports/source-pack/source-pack-manifest-check.json
+
+tevv_local:
+  stage: tevv
+  script:
+    - python3 --version
+    - PYTHON_BIN="${PYTHON_BIN:-python3}" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/tevv/
+      - reports/tests/junit.xml
+      - reports/validation/
+      - reports/source-pack/
+      - reports/customer-pack/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
