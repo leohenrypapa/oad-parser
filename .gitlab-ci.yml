@@ -63,6 +63,30 @@ tevv_local:
       else
         echo "reports/tevv/tevv-report.json not found"
       fi
+      echo "== TEVV customer-pack generation stdout =="
+      if [ -f reports/tevv/customer-pack/customer-pack-generation.stdout.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-generation.stdout.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-generation.stdout.txt not found"
+      fi
+      echo "== TEVV customer-pack generation stderr =="
+      if [ -f reports/tevv/customer-pack/customer-pack-generation.stderr.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-generation.stderr.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-generation.stderr.txt not found"
+      fi
+      echo "== TEVV customer-pack validation stdout =="
+      if [ -f reports/tevv/customer-pack/customer-pack-validation.stdout.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-validation.stdout.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-validation.stdout.txt not found"
+      fi
+      echo "== TEVV customer-pack validation stderr =="
+      if [ -f reports/tevv/customer-pack/customer-pack-validation.stderr.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-validation.stderr.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-validation.stderr.txt not found"
+      fi
       exit "$tevv_rc"
   artifacts:
     when: always
