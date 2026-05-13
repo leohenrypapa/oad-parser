@@ -30,6 +30,7 @@ REQUIRED_ENTRIES = [
     "docs/ops/filebeat-elastic-agent-handoff.md",
     "docs/release/CUSTOMER_HANDOFF.md",
     "docs/release/RELEASE_CHECKLIST.md",
+    "docs/release/target-environment-validation.md",
     "oad_parser/__main__.py",
     "oad_parser/cli.py",
     "oad_parser/config.py",

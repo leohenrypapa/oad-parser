@@ -155,3 +155,11 @@ Before customer operational acceptance, complete or explicitly defer the target-
 The gate covers Oracle Linux Server 9.6, Python 3.9.2, root runtime/systemd validation, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection for `eno1` through `eno5` as applicable, output file checks, storage behavior validation, and Filebeat/Elastic Agent 8.17.3 SIEM owner confirmation.
 
 Do not commit target logs, runtime outputs, real PCAPs, raw payloads, hostnames, IP addresses, SIEM endpoints, tokens, certificates, private keys, index names, customer-specific interface mappings, or unsanitized systemd journal exports.
+
+## Customer pack target-validation checklist inclusion
+
+Before tag readiness, confirm the customer runtime/operator handoff pack includes:
+
+    docs/release/target-environment-validation.md
+
+The customer-pack validator requires this file and must report `"status": "passed"` before handoff.
