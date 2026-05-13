@@ -171,3 +171,16 @@ Issue #39 verifies that Sprint 2 documentation alignment is consistent with the 
 - Systemd template support and Filebeat/Elastic Agent handoff boundaries are documented.
 - Internal engineering source-pack workflows remain separate from future customer runtime/operator package workflows.
 - The customer-pack gate remains planned until Issue #40 and Issue #41.
+
+### Customer-pack validation automation
+
+Issue #41 adds `scripts/validate_customer_pack.py` and updates `scripts/run_tevv_suite.py` so customer-pack validation is no longer skipped when both of these files exist:
+
+- `scripts/make_customer_pack.sh`
+- `scripts/validate_customer_pack.py`
+
+The local TEVV profile now generates a customer runtime/operator pack under the selected report directory and validates it with:
+
+    .venv/bin/python scripts/validate_customer_pack.py --pack reports/tevv/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/tevv/customer-pack/customer-pack-validation.json
+
+Generated customer-pack evidence remains under `reports/` and is not committed by default.

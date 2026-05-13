@@ -357,17 +357,62 @@ def run_local_gates(args: argparse.Namespace, report_dir: Path) -> List[Dict[str
         )
     )
 
-    gates.append(
-        skipped_gate(
-            name="customer-pack validation",
-            owner_role="Release engineer and sanitization reviewer",
-            profile=args.profile,
-            classification="planned local",
-            command="planned scripts/make_customer_pack.sh and scripts/validate_customer_pack.py",
-            evidence_files=["reports/customer-pack/customer-pack-validation.json"],
-            limitations=["skipped until Issue #40 and Issue #41 implement customer-pack generation and validation."],
+    customer_pack_script = REPO_ROOT / "scripts" / "make_customer_pack.sh"
+    customer_pack_validator = REPO_ROOT / "scripts" / "validate_customer_pack.py"
+    customer_pack_dir = report_dir / "customer-pack"
+    customer_pack_tar = customer_pack_dir / "oad-parser-customer-runtime.tar.gz"
+    customer_pack_validation = customer_pack_dir / "customer-pack-validation.json"
+
+    if customer_pack_script.exists() and customer_pack_validator.exists():
+        gates.append(
+            run_command_gate(
+                name="customer-pack generation",
+                owner_role="Release engineer",
+                profile=args.profile,
+                classification="local",
+                command=["bash", "scripts/make_customer_pack.sh", str(customer_pack_tar)],
+                report_dir=report_dir,
+                stdout_path=customer_pack_dir / "customer-pack-generation.stdout.txt",
+                stderr_path=customer_pack_dir / "customer-pack-generation.stderr.txt",
+                evidence_files=[customer_pack_tar],
+                limitations=["Generates customer runtime/operator pack under reports/; generated evidence is not committed by default."],
+            )
         )
-    )
+        gates.append(
+            run_command_gate(
+                name="customer-pack validation",
+                owner_role="Release engineer and sanitization reviewer",
+                profile=args.profile,
+                classification="local",
+                command=[
+                    py,
+                    "scripts/validate_customer_pack.py",
+                    "--pack",
+                    str(customer_pack_tar),
+                    "--output-json",
+                    str(customer_pack_validation),
+                ],
+                report_dir=report_dir,
+                stdout_path=customer_pack_dir / "customer-pack-validation.stdout.txt",
+                stderr_path=customer_pack_dir / "customer-pack-validation.stderr.txt",
+                evidence_files=[customer_pack_validation],
+                pass_json_path=customer_pack_validation,
+                pass_json_expr='data.get("status") == "passed"',
+                limitations=["Validates customer runtime/operator pack entries, manifest, hashes, and excluded internal/dev-only artifacts."],
+            )
+        )
+    else:
+        gates.append(
+            skipped_gate(
+                name="customer-pack validation",
+                owner_role="Release engineer and sanitization reviewer",
+                profile=args.profile,
+                classification="planned local",
+                command="scripts/make_customer_pack.sh and scripts/validate_customer_pack.py",
+                evidence_files=["reports/customer-pack/customer-pack-validation.json"],
+                limitations=["skipped because customer-pack generation or validation script is not present."],
+            )
+        )
 
     gates.append(
         run_command_gate(

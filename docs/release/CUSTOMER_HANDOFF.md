@@ -127,3 +127,13 @@ The customer pack excludes internal/dev-only CI, tests, source-pack tooling, cor
 The package contains `CUSTOMER-PACK-MANIFEST.json`, which records the package profile, included files, hashes, operational path notes, and exclusion posture.
 
 Issue #41 will add a dedicated customer-pack validation script. Until then, release operators should inspect the generated tar listing and manifest before handoff.
+
+## Customer-pack validation
+
+Validate the generated customer runtime/operator pack before handoff:
+
+    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+
+The validation report records required-entry checks, forbidden-entry checks, manifest checks, unsafe-artifact checks, limitations, and an overall `status`.
+
+A valid generated customer pack should return exit code 0 and report `"status": "passed"`.
