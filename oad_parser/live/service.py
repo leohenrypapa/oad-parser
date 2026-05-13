@@ -2,8 +2,8 @@
 
 The service consumes already-captured LiveCaptureFrame objects so it can be
 tested without root privileges, raw sockets, operational traffic, or runtime
-files. Later issues can connect this skeleton to the raw socket adapter,
-JSONL writer, audit writer, and status writer.
+files. Production wiring can inject JSONL writer, audit/status writers, and
+storage policy while unit tests use synthetic frames and temporary paths.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Callable, Iterable, Optional
 
 from oad_parser.config import LiveParserConfig
+from oad_parser.live.audit import audit_record_from_storage_result
 from oad_parser.live.classifier import classify_live_frame
 from oad_parser.live.metrics import LiveMetrics
 from oad_parser.live.pipeline import process_classified_live_frame
@@ -21,11 +22,12 @@ from oad_parser.live.records import (
     EcgStatusSnapshot,
     LiveCaptureFrame,
 )
+from oad_parser.live.storage import LiveStoragePolicy, StorageProtectionResult
 
 
-RecordSink = Callable[[dict], None]
-AuditSink = Callable[[EcgAuditRecord], None]
-StatusSink = Callable[[EcgStatusSnapshot], None]
+RecordSink = Callable[[dict], object]
+AuditSink = Callable[[EcgAuditRecord], object]
+StatusSink = Callable[[EcgStatusSnapshot], object]
 NowFn = Callable[[], datetime]
 
 
@@ -38,6 +40,16 @@ class LiveServiceResult:
     records_emitted: int
     stopped_reason: str
     last_error: Optional[str] = None
+    storage_critical: bool = False
+    writer_blocked: bool = False
+
+
+@dataclass(frozen=True)
+class _StorageState:
+    result: Optional[StorageProtectionResult]
+    writer_blocked: bool
+    critical: bool
+    last_error: Optional[str]
 
 
 def run_live_service(
@@ -48,21 +60,11 @@ def run_live_service(
     record_sink: Optional[RecordSink] = None,
     audit_sink: Optional[AuditSink] = None,
     status_sink: Optional[StatusSink] = None,
+    storage_policy: Optional[LiveStoragePolicy] = None,
     max_frames: Optional[int] = None,
     now_fn: Optional[NowFn] = None,
 ) -> LiveServiceResult:
-    """Run the live service over a finite iterable of capture frames.
-
-    Args:
-        config: Live parser configuration.
-        capture_frames: Iterable of synthetic or adapter-produced capture frames.
-        metrics: Optional metrics instance to update.
-        record_sink: Optional callable that receives JSON-serializable records.
-        audit_sink: Optional callable that receives audit records.
-        status_sink: Optional callable that receives final status snapshots.
-        max_frames: Optional smoke-test frame limit. Not intended for systemd use.
-        now_fn: Optional UTC clock function for deterministic tests.
-    """
+    """Run the live service over a finite iterable of capture frames."""
 
     if max_frames is not None and max_frames < 0:
         raise ValueError("max_frames must be >= 0")
@@ -72,6 +74,11 @@ def run_live_service(
     frames_processed = 0
     records_emitted = 0
     last_error: Optional[str] = None
+    stopped_reason = "input_exhausted"
+    writer_blocked = False
+    storage_critical = False
+    last_storage_result: Optional[StorageProtectionResult] = None
+    writer_block_started_at: Optional[datetime] = None
 
     last_error = _emit_audit(
         audit_sink,
@@ -88,6 +95,31 @@ def run_live_service(
             stopped_reason = "max_frames"
             break
 
+        storage_state = _apply_storage_policy(
+            config=config,
+            metrics=resolved_metrics,
+            storage_policy=storage_policy,
+            audit_sink=audit_sink,
+            status_sink=status_sink,
+            now_fn=resolved_now_fn,
+            last_error=last_error,
+        )
+        last_error = storage_state.last_error
+        last_storage_result = storage_state.result
+        writer_blocked = storage_state.writer_blocked
+
+        writer_block_started_at = _update_writer_block_timer(
+            metrics=resolved_metrics,
+            writer_blocked=writer_blocked,
+            writer_block_started_at=writer_block_started_at,
+            now_fn=resolved_now_fn,
+        )
+
+        if storage_state.critical:
+            storage_critical = True
+            stopped_reason = "critical_storage"
+            break
+
         try:
             capture_frame = next(frame_iter)
         except StopIteration:
@@ -100,16 +132,31 @@ def run_live_service(
             metrics=resolved_metrics,
         )
 
+        if writer_blocked and config.block_when_full:
+            if pipeline_result.records:
+                resolved_metrics.increment("output_drops", len(pipeline_result.records))
+            frames_processed += 1
+            continue
+
         for record in pipeline_result.records:
             try:
+                write_result = None
                 if record_sink is not None:
-                    record_sink(record)
+                    write_result = record_sink(record)
+                _update_metrics_from_write_result(resolved_metrics, write_result)
                 records_emitted += 1
             except Exception as exc:
                 resolved_metrics.increment("output_drops")
                 last_error = "record sink failed: %s" % exc
 
         frames_processed += 1
+
+    _update_writer_block_timer(
+        metrics=resolved_metrics,
+        writer_blocked=False,
+        writer_block_started_at=writer_block_started_at,
+        now_fn=resolved_now_fn,
+    )
 
     last_error = _emit_audit(
         audit_sink,
@@ -121,6 +168,8 @@ def run_live_service(
             "frames_processed": frames_processed,
             "records_emitted": records_emitted,
             "output_drops": resolved_metrics.output_drops,
+            "writer_blocked": writer_blocked,
+            "storage_critical": storage_critical,
         },
         last_error,
     )
@@ -131,6 +180,7 @@ def run_live_service(
         resolved_metrics,
         resolved_now_fn,
         last_error,
+        storage_result=last_storage_result,
     )
 
     return LiveServiceResult(
@@ -139,7 +189,108 @@ def run_live_service(
         records_emitted=records_emitted,
         stopped_reason=stopped_reason,
         last_error=last_error,
+        storage_critical=storage_critical,
+        writer_blocked=writer_blocked,
     )
+
+
+def _apply_storage_policy(
+    *,
+    config: LiveParserConfig,
+    metrics: LiveMetrics,
+    storage_policy: Optional[LiveStoragePolicy],
+    audit_sink: Optional[AuditSink],
+    status_sink: Optional[StatusSink],
+    now_fn: NowFn,
+    last_error: Optional[str],
+) -> _StorageState:
+    if storage_policy is None:
+        return _StorageState(
+            result=None,
+            writer_blocked=False,
+            critical=False,
+            last_error=last_error,
+        )
+
+    try:
+        result = storage_policy.apply()
+    except Exception as exc:
+        metrics.increment("output_drops")
+        return _StorageState(
+            result=None,
+            writer_blocked=True if config.block_when_full else False,
+            critical=False,
+            last_error="storage policy failed: %s" % exc,
+        )
+
+    if result.files_pruned:
+        metrics.increment("files_pruned", result.files_pruned)
+
+    if result.files_pruned or result.writer_blocked or result.critical:
+        event_type = "storage_critical" if result.critical else "storage_protection"
+        try:
+            if audit_sink is not None:
+                audit_sink(
+                    audit_record_from_storage_result(
+                        timestamp_utc=now_fn(),
+                        interface=config.interface,
+                        event_type=event_type,
+                        storage_result=result,
+                    )
+                )
+        except Exception as exc:
+            last_error = "audit sink failed: %s" % exc
+
+        if result.writer_blocked or result.critical:
+            last_error = _emit_status(
+                status_sink,
+                config,
+                metrics,
+                now_fn,
+                last_error,
+                storage_result=result,
+            )
+
+    return _StorageState(
+        result=result,
+        writer_blocked=result.writer_blocked,
+        critical=result.critical,
+        last_error=last_error,
+    )
+
+
+def _update_metrics_from_write_result(metrics: LiveMetrics, write_result: object) -> None:
+    if write_result is None:
+        return
+
+    bytes_written = getattr(write_result, "bytes_written", None)
+    if isinstance(bytes_written, int):
+        metrics.increment("bytes_written", bytes_written)
+
+    rotated_path = getattr(write_result, "rotated_path", None)
+    if rotated_path:
+        metrics.increment("files_rotated")
+
+
+def _update_writer_block_timer(
+    *,
+    metrics: LiveMetrics,
+    writer_blocked: bool,
+    writer_block_started_at: Optional[datetime],
+    now_fn: NowFn,
+) -> Optional[datetime]:
+    now = now_fn()
+
+    if writer_blocked and writer_block_started_at is None:
+        return now
+
+    if not writer_blocked and writer_block_started_at is not None:
+        seconds = (now - writer_block_started_at).total_seconds()
+        if seconds > 0:
+            metrics.add_writer_block_seconds(seconds)
+        return None
+
+    return writer_block_started_at
 
 
 def _emit_audit(
@@ -173,9 +324,19 @@ def _emit_status(
     metrics: LiveMetrics,
     now_fn: NowFn,
     last_error: Optional[str],
+    *,
+    storage_result: Optional[StorageProtectionResult] = None,
 ) -> Optional[str]:
     if status_sink is None:
         return last_error
+
+    disk_percent = storage_result.disk_usage_percent if storage_result is not None else None
+    last_prune = None
+    if storage_result is not None and storage_result.files_pruned:
+        last_prune = "files_pruned=%d bytes_pruned=%d" % (
+            storage_result.files_pruned,
+            storage_result.bytes_pruned,
+        )
 
     try:
         status_sink(
@@ -184,6 +345,8 @@ def _emit_status(
                 interface=config.interface,
                 counters=metrics.snapshot(),
                 active_file=config.output_json_file,
+                disk_percent=disk_percent,
+                last_prune=last_prune,
                 last_error=last_error,
             )
         )
