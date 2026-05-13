@@ -5,8 +5,9 @@
 Before executing Sprint 3 release-hardening gates, review:
 
 - `docs/release/sprint-2-closeout.md`
+- `docs/release/ci-cd-release-workflow.md`
 
-The closeout records the final Sprint 2 merged baseline at `0277f30`, the proposed but uncreated tag `v0.3.0-live-parser-foundation`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
+The closeout records the Sprint 2 live parser foundation and the protected release tag `v0.3.0-live-parser-foundation` at `ec77682`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
 
 
 ## Scope gate
@@ -70,7 +71,7 @@ Minimum evidence expectations:
 - Platform validation JSON showing `"passed": true`.
 - Static validation for systemd and Filebeat/Elastic handoff documentation.
 - Internal source-pack hygiene result.
-- Customer-pack hygiene result after the customer pack generator and validator exist.
+- Customer-pack hygiene result from the generated customer runtime/operator pack and `scripts/validate_customer_pack.py`.
 - Short 6100 PPS synthetic acceptance result.
 - Target-environment checklist result after Oracle Linux Server 9.6 validation is executed.
 - SIEM handoff confirmation by the SIEM owner.
@@ -96,7 +97,18 @@ Expected generated evidence:
 - `reports/tevv/tevv-report.md`
 - `reports/tevv/tevv-evidence-manifest.json`
 
-The TEVV runner is an orchestration tool for local gates and planned/manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, SIEM owner handoff confirmation, customer-pack generation, or customer-pack validation.
+The TEVV runner is an orchestration tool for local gates and manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, or SIEM owner handoff confirmation.
+
+## CI/CD release workflow gate
+
+Review `docs/release/ci-cd-release-workflow.md` before release packaging or protected tag review.
+
+Minimum CI/CD expectations:
+
+- Merge request and default branch pipelines run `verify`, `tevv_local`, `customer_pack`, and `source_pack`.
+- Protected `v*` tag pipelines run `release_artifacts` and publish release checksums, TEVV reports, customer-pack artifacts, and source-pack artifacts.
+- CI/CD artifacts support local engineering and package-readiness evidence only.
+- Target-site operational acceptance remains pending until target evidence exists.
 
 ## Sprint 2 documentation alignment gate
 
@@ -108,7 +120,7 @@ For Issue #39, customer-facing and release-facing docs must reflect the final Sp
 - `deploy/systemd/ecg-parser@.service` and `ecg-parser@<interface>.service` usage are documented.
 - `/etc/oad-parser/ecg_conf.ini` is documented as the target config path.
 - Filebeat/Elastic Agent handoff boundaries are documented, with final SIEM version/site config confirmed by the SIEM owner.
-- Internal engineering source pack workflows remain separate from the future customer runtime/operator handoff pack.
+- Internal engineering source pack workflows remain separate from the customer runtime/operator handoff pack.
 - Source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not required customer operational steps.
 
 ## Customer runtime/operator pack generation gate
@@ -117,7 +129,7 @@ Generate the customer runtime/operator handoff pack before customer release:
 
     bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
 
-Minimum manual checks until Issue #41 adds the customer-pack validator:
+Minimum customer-pack content expectations:
 
 - `CUSTOMER-PACK-MANIFEST.json` is present.
 - `config/ecg_conf.example.ini` is present.
@@ -132,7 +144,7 @@ The customer runtime/operator pack is separate from the internal engineering sou
 
 ## Customer-pack validation gate
 
-Issue #41 adds automated customer-pack validation:
+Automated customer-pack validation is available through `scripts/validate_customer_pack.py`:
 
     .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
 
