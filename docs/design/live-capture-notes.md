@@ -25,3 +25,10 @@ Live capture must remain an adapter:
     live socket frame -> parser core -> optional detector engine -> JSONL output
 
 Do not put socket handling inside `oad_parser.parsers.ecg`.
+## Sprint 2 live capture adapter contract
+
+- The bounded `iter_live_frames` helper remains available for legacy capture and tests, returning raw frame bytes.
+- The production live path should use `iter_live_capture_frames` or `iter_live_capture_frames_from_config` so each frame carries interface, UTC capture timestamp, frame length, and sequence_number metadata.
+- The adapter applies configured `receive_buffer_bytes` with SO_RCVBUF when provided.
+- Unit tests use a mock socket factory. They do not open raw sockets and do not require root privileges.
+
