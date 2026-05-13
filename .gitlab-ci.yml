@@ -6,6 +6,7 @@ stages:
   - release
 variables:
   PYTHON_BIN: "python3"
+  OAD_ALLOW_CI_PY39_PATCH_DRIFT: "1"
 
 workflow:
   rules:

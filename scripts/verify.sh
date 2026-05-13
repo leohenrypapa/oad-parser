@@ -10,20 +10,34 @@ DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
 PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON}"
 
 if [ ! -x "$PYTHON_BIN" ]; then
-  echo "ERROR: Python interpreter is not executable: $PYTHON_BIN" >&2
-  echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
-  exit 1
+  if command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v "$PYTHON_BIN")"
+  else
+    echo "ERROR: Python interpreter is not executable or resolvable on PATH: $PYTHON_BIN" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
+    exit 1
+  fi
 fi
 
 mkdir -p reports/tests reports/validation reports/source-pack
 
 "$PYTHON_BIN" - <<'PYVER'
+import os
 import sys
-if sys.version_info[:3] != (3, 9, 2):
-    raise SystemExit(
-        "ERROR: Python 3.9.2 is required; found %s.%s.%s"
-        % sys.version_info[:3]
-    )
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
 PYVER
 
 python_version="$($PYTHON_BIN --version 2>&1)"

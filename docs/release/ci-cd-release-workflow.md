@@ -77,7 +77,7 @@ For local work, use:
 
     /home/yyou/rapid-capabilities-oad-parser/.venv/bin/python
 
-The CI image must provide Python 3.9.2 exactly for hard-gated release validation. If a CI runner image reports a different patch version, treat that as a CI environment defect before relying on CI release evidence.
+Local release validation must use Python 3.9.2 exactly. GitLab CI uses the pinned Iron Bank `python39` image and may report a newer Python 3.9 patch version; CI jobs set `OAD_ALLOW_CI_PY39_PATCH_DRIFT=1` so CI validates Python 3.9.x behavior without weakening the local 3.9.2 release-validation requirement.
 
 ## Customer and internal artifact separation
 
