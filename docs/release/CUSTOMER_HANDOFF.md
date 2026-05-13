@@ -99,3 +99,31 @@ Customer-facing operational content should focus on:
 The internal engineering source pack may retain tests, source-pack logic, corpus/golden-fixture tooling, TEVV automation, and AI/dev context. Those workflows should not be presented as customer-required operator steps.
 
 Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final site-specific version, endpoint, index, credentials, certificates, and deployment configuration must be confirmed by the SIEM owner outside this repo.
+
+## Customer runtime/operator pack profile
+
+Issue #40 adds the customer runtime/operator handoff pack profile.
+
+Generate the customer pack with:
+
+    bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
+
+This customer pack is separate from the internal engineering source pack produced by `scripts/make_source_pack.sh` or `oad_parser create-source-pack`.
+
+The customer pack includes runtime/operator content required for:
+
+- `python -m oad_parser --help`
+- `python -m oad_parser live --help`
+- `/etc/oad-parser/ecg_conf.ini`
+- `/nsm/ecg/ecg-current.json` JSON Lines output
+- `/nsm/ecg/ecg-audit.jsonl`
+- `/nsm/ecg/ecg-status.json`
+- `deploy/systemd/ecg-parser@.service`
+- `docs/ops/systemd-live-parser.md`
+- `docs/ops/filebeat-elastic-agent-handoff.md`
+
+The customer pack excludes internal/dev-only CI, tests, source-pack tooling, corpus/golden-fixture tooling, TEVV development evidence, generated reports, archives, caches, PCAPs, raw payloads, secrets, local runtime outputs, and site-specific SIEM values by default.
+
+The package contains `CUSTOMER-PACK-MANIFEST.json`, which records the package profile, included files, hashes, operational path notes, and exclusion posture.
+
+Issue #41 will add a dedicated customer-pack validation script. Until then, release operators should inspect the generated tar listing and manifest before handoff.

@@ -229,3 +229,11 @@ The MVP handoff collects append-style files only: `/nsm/ecg/ecg-current.json` an
 
 The synthetic live parser acceptance harness is `scripts/run_live_acceptance_6100pps.py`.
 It generates synthetic in-memory frames only and can emit a JSON report for the 6100 PPS best-effort target.
+
+## Customer runtime/operator package
+
+Create the customer runtime/operator handoff package with:
+
+    bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
+
+This package is separate from the internal engineering source pack. It includes runtime code and operator handoff documents, and excludes tests, CI, source-pack tooling, corpus/golden-fixture workflows, generated reports, PCAPs, raw payloads, secrets, and site-specific runtime outputs by default.

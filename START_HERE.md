@@ -144,3 +144,11 @@ Use local pcap inspection and local pcap validation only with approved sanitized
 ## Troubleshooting
 
 Use `docs/TROUBLESHOOTING.md` for common first-run, Python version, missing `.git`, missing input, malformed input, and corpus validation failures.
+
+## Customer pack generation
+
+For customer runtime/operator handoff packaging, run:
+
+    bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
+
+Use the internal engineering source pack only for maintainer/developer handoff. The customer pack profile excludes internal/dev-only workflows by default.
