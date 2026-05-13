@@ -14,7 +14,7 @@ It is not a final operational semantic radar decoder release.
 
 ## Validation evidence
 
-Supported runtime: Python 3.9.2 or newer.
+Supported release-validation runtime: Python 3.9.2 exactly.
 
 Expected release evidence:
 
@@ -64,10 +64,10 @@ Local pcap validation scripts are provided for authorized internal use only. Rep
 
 - Target runtime validation must be run with Python 3.9.2 before customer handoff.
 - Recommended validation commands:
-  - python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-  - python3.9 -m oad_parser --help
-  - python3.9 -m oad_parser validate-platform
-  - python3.9 -m oad_parser create-source-pack --output /tmp/oad-parser-source-pack.tar.gz
+  - .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
+  - .venv/bin/python -m oad_parser --help
+  - .venv/bin/python -m oad_parser validate-platform
+  - PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
 - The `capture` command requires bounded capture with `--max-frames` or `[capture] max_frames` in config. Continuous capture is not enabled for JSONL handoff output.
 - `validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
 - A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat this as a validation failure until the input format and parser selection are confirmed.
@@ -102,7 +102,7 @@ Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but fina
 
 ## Customer runtime/operator pack profile
 
-Issue #40 adds the customer runtime/operator handoff pack profile.
+The repository includes the customer runtime/operator handoff pack profile.
 
 Generate the customer pack with:
 
@@ -126,7 +126,7 @@ The customer pack excludes internal/dev-only CI, tests, source-pack tooling, cor
 
 The package contains `CUSTOMER-PACK-MANIFEST.json`, which records the package profile, included files, hashes, operational path notes, and exclusion posture.
 
-Issue #41 will add a dedicated customer-pack validation script. Until then, release operators should inspect the generated tar listing and manifest before handoff.
+The repository includes a dedicated customer-pack validation script. Release operators should validate the generated pack and inspect the manifest before handoff.
 
 ## Customer-pack validation
 

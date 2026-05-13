@@ -62,7 +62,7 @@ Scope constraints:
 - Generated evidence under `reports/` is not committed by default.
 - Target-environment evidence may contain site-sensitive details and must remain local unless explicitly sanitized and approved.
 - Oracle Linux Server 9.6 target validation is a remaining gate and is not claimed complete by this document.
-- Customer-pack validation is a planned gate until the customer-pack generator and validator exist.
+- Customer-pack validation is an implemented local gate through `scripts/make_customer_pack.sh` and `scripts/validate_customer_pack.py`.
 - Optional one-hour 6100 PPS acceptance is P1 and is not a blocker for the initial customer runtime/operator handoff package.
 
 ### Gate matrix
@@ -159,7 +159,7 @@ The `target-oracle` profile is available for target-environment context and manu
 
     .venv/bin/python scripts/run_tevv_suite.py --profile target-oracle --report-dir reports/tevv-target
 
-The runner does not implement customer-pack generation, customer-pack validation, one-hour 6100 PPS mode, or target root/systemd execution. Customer-pack validation remains `skipped` until Issue #40 and Issue #41 are complete. Generated TEVV evidence under `reports/` is not committed by default.
+The runner implements local customer-pack generation and validation. It does not implement one-hour 6100 PPS mode or target root/systemd execution. Generated TEVV evidence under `reports/` is not committed by default.
 
 ## Documentation alignment validation note
 
@@ -169,12 +169,12 @@ Issue #39 verifies that Sprint 2 documentation alignment is consistent with the 
 - `/nsm/ecg/ecg-current.json` is documented as JSON Lines despite the `.json` suffix.
 - `/nsm/ecg/ecg-audit.jsonl` and `/nsm/ecg/ecg-status.json` are documented.
 - Systemd template support and Filebeat/Elastic Agent handoff boundaries are documented.
-- Internal engineering source-pack workflows remain separate from future customer runtime/operator package workflows.
+- Internal engineering source-pack workflows remain separate from customer runtime/operator package workflows.
 - The customer-pack gate remains planned until Issue #40 and Issue #41.
 
 ### Customer-pack validation automation
 
-Issue #41 adds `scripts/validate_customer_pack.py` and updates `scripts/run_tevv_suite.py` so customer-pack validation is no longer skipped when both of these files exist:
+Customer-pack validation automation is present through `scripts/validate_customer_pack.py` and `scripts/run_tevv_suite.py` when both of these files exist:
 
 - `scripts/make_customer_pack.sh`
 - `scripts/validate_customer_pack.py`

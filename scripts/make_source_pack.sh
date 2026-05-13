@@ -4,6 +4,38 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+DEFAULT_PYTHON="$repo_root/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON}"
+
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v "$PYTHON_BIN")"
+  else
+    echo "ERROR: Python interpreter is not executable or resolvable on PATH: $PYTHON_BIN" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
+    exit 1
+  fi
+fi
+
+"$PYTHON_BIN" - <<'PYVER'
+import os
+import sys
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+PYVER
+
 usage() {
   echo "usage: scripts/make_source_pack.sh [OUTPUT_TAR_GZ]"
   echo "       scripts/make_source_pack.sh --output OUTPUT_TAR_GZ"
@@ -37,7 +69,7 @@ esac
 
 mkdir -p "$(dirname "$output")"
 
-python3 -m oad_parser create-source-pack --output "$output" --tracked-only
+"$PYTHON_BIN" -m oad_parser create-source-pack --output "$output" --tracked-only
 
 echo
 echo "== source pack =="
@@ -113,7 +145,7 @@ echo "OK: no unsafe source-pack entries"
 echo
 echo "== manifest content check =="
 tar -xOzf "$output" SOURCE-PACK-MANIFEST.json > "$manifest_file"
-python3 - "$manifest_file" <<'PY'
+"$PYTHON_BIN" - "$manifest_file" <<'PY'
 import json
 import re
 import sys

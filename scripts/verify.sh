@@ -1,33 +1,43 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-PYTHON_BIN="${PYTHON_BIN:-}"
-if [ -z "$PYTHON_BIN" ]; then
-  for candidate in python3.9 python3 python; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      PYTHON_BIN="$candidate"
-      break
-    fi
-  done
-fi
+DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+PYTHON_BIN="${PYTHON_BIN:-$DEFAULT_PYTHON}"
 
-if [ -z "$PYTHON_BIN" ]; then
-  echo "ERROR: no Python interpreter found. Python 3.9.2 or newer is required." >&2
-  exit 1
+if [ ! -x "$PYTHON_BIN" ]; then
+  if command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v "$PYTHON_BIN")"
+  else
+    echo "ERROR: Python interpreter is not executable or resolvable on PATH: $PYTHON_BIN" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
+    exit 1
+  fi
 fi
 
 mkdir -p reports/tests reports/validation reports/source-pack
 
 "$PYTHON_BIN" - <<'PYVER'
+import os
 import sys
-if sys.version_info < (3, 9, 2):
-    raise SystemExit(
-        "ERROR: Python 3.9.2 or newer is required; found %s.%s.%s"
-        % sys.version_info[:3]
-    )
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
 PYVER
 
 python_version="$($PYTHON_BIN --version 2>&1)"
@@ -57,7 +67,7 @@ cat reports/validation/platform-validation.json
 
 echo
 echo "== quickstart check =="
-bash scripts/quickstart_check.sh | tee reports/validation/quickstart-check.txt
+PYTHON_BIN="$PYTHON_BIN" bash scripts/quickstart_check.sh | tee reports/validation/quickstart-check.txt
 
 echo
 echo "== source-pack smoke =="

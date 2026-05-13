@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 OUT="${1:-}"
 if [ -z "$OUT" ]; then
   echo "Usage: $0 /path/to/oad-parser-customer-runtime.tar.gz" >&2
   exit 2
 fi
 
-PY="${PYTHON:-python3}"
+DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+PY="${PYTHON_BIN:-${PYTHON:-$DEFAULT_PYTHON}}"
+
+if [ ! -x "$PY" ]; then
+  if command -v "$PY" >/dev/null 2>&1; then
+    PY="$(command -v "$PY")"
+  else
+    echo "ERROR: Python interpreter is not executable or resolvable on PATH: $PY" >&2
+    echo "Set PYTHON_BIN to the repo Python 3.9.2 interpreter if needed." >&2
+    exit 1
+  fi
+fi
 
 "$PY" - "$OUT" <<'PY'
 import hashlib
@@ -19,6 +32,20 @@ import tarfile
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
 
 out_path = Path(sys.argv[1]).resolve()
 repo = Path.cwd().resolve()
@@ -160,6 +187,17 @@ def include_candidate(rel):
         return True
     return False
 
+def get_filesystem_files():
+    files = []
+    for path in repo.rglob("*"):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(repo).as_posix()
+        if include_candidate(rel):
+            files.append(rel)
+    return sorted(set(files))
+
+
 def get_tracked_files():
     try:
         result = subprocess.run(
@@ -170,9 +208,15 @@ def get_tracked_files():
             stderr=subprocess.PIPE,
             check=True,
         )
+        files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        if files:
+            return files
+    except FileNotFoundError:
+        return get_filesystem_files()
     except Exception as exc:
         raise SystemExit(f"ERROR: failed to list tracked files with git: {exc}")
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+    return get_filesystem_files()
 
 tracked_files = get_tracked_files()
 
@@ -273,4 +317,8 @@ PY
 echo
 echo "== customer pack =="
 echo "$OUT"
-du -h "$OUT"
+if command -v du >/dev/null 2>&1; then
+  du -h "$OUT"
+else
+  echo "du not available; skipping customer-pack size display"
+fi

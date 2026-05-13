@@ -67,7 +67,7 @@ For a deeper check that also runs unit tests:
 
     ./scripts/quickstart_check.sh --with-tests
 
-The quickstart script auto-selects `python3.9`, then `python3`, then `python`. Python 3.9.2 or newer is required. In the customer Python 3.9.2 environment, prefer explicit `python3.9` commands when collecting handoff evidence.
+The quickstart script uses the repo virtual environment by default. Python 3.9.2 exactly is required for release validation. In the customer Python 3.9.2 environment, use the approved interpreter path when collecting handoff evidence.
 
 Expected success marker:
 
@@ -80,12 +80,12 @@ These checks prove the local package, CLI command surface, synthetic fixture pat
 Collect this evidence before customer handoff in the target Python 3.9.2 environment:
 
     python3.9 --version
-    python3.9 -m compileall -q oad_parser
-    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-    python3.9 -m oad_parser --help
-    python3.9 -m oad_parser validate-platform
-    python3.9 -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
-    python3.9 -m oad_parser create-source-pack --output /tmp/oad-parser-source-pack.tar.gz
+    .venv/bin/python -m compileall -q oad_parser
+    .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
+    .venv/bin/python -m oad_parser --help
+    .venv/bin/python -m oad_parser validate-platform
+    .venv/bin/python -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
+    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
 
 ## Git-checkout release validation
 
@@ -95,7 +95,7 @@ Run from a Git checkout only:
 
     scripts/validate_sanitized_release.sh
     scripts/validate_release_readiness.sh
-    scripts/make_source_pack.sh ~/Downloads/oad-parser-source-pack-final.tar.gz
+    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
 
 Equivalent Make targets from a Git checkout:
 

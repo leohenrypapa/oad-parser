@@ -5,8 +5,10 @@
 Before executing Sprint 3 release-hardening gates, review:
 
 - `docs/release/sprint-2-closeout.md`
+- `docs/release/ci-cd-release-workflow.md`
+- `docs/release/target-environment-validation-result-template.md`
 
-The closeout records the final Sprint 2 merged baseline at `0277f30`, the proposed but uncreated tag `v0.3.0-live-parser-foundation`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
+The closeout records the Sprint 2 live parser foundation and the protected release tag `v0.3.0-live-parser-foundation` at `ec77682`, validation evidence, included systemd and SIEM handoff artifacts, and remaining target/customer-handoff gates.
 
 
 ## Scope gate
@@ -24,17 +26,20 @@ The closeout records the final Sprint 2 merged baseline at `0277f30`, the propos
 
 ## Validation gate
 
-Supported runtime: Python 3.9.2 or newer.
+Supported release-validation runtime: Python 3.9.2 exactly.
 
 Run from the repository root:
 
     git status --short
-    bash scripts/verify.sh
-    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-    python3.9 -m oad_parser validate-platform
-    scripts/validate_sanitized_release.sh
-    scripts/validate_release_readiness.sh
-    scripts/make_source_pack.sh ~/Downloads/oad-parser-source-pack-final.tar.gz
+    .venv/bin/python -c 'import sys; assert sys.version_info[:3] == (3, 9, 2), sys.version'
+    PYTHON_BIN=.venv/bin/python bash scripts/verify.sh
+    .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
+    .venv/bin/python -m oad_parser validate-platform
+    .venv/bin/python scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
+    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
+    .venv/bin/python scripts/check_source_pack_manifest.py --pack /tmp/oad-parser-source-pack-final.tar.gz --output-json /tmp/oad-source-pack-manifest-check.json
 
 ## Source-pack gate
 
@@ -70,9 +75,10 @@ Minimum evidence expectations:
 - Platform validation JSON showing `"passed": true`.
 - Static validation for systemd and Filebeat/Elastic handoff documentation.
 - Internal source-pack hygiene result.
-- Customer-pack hygiene result after the customer pack generator and validator exist.
+- Customer-pack hygiene result from the generated customer runtime/operator pack and `scripts/validate_customer_pack.py`.
 - Short 6100 PPS synthetic acceptance result.
 - Target-environment checklist result after Oracle Linux Server 9.6 validation is executed.
+- Target-site validation results should be recorded with `docs/release/target-environment-validation-result-template.md` after checklist execution and sanitization review.
 - SIEM handoff confirmation by the SIEM owner.
 
 Evidence handling requirements:
@@ -96,7 +102,38 @@ Expected generated evidence:
 - `reports/tevv/tevv-report.md`
 - `reports/tevv/tevv-evidence-manifest.json`
 
-The TEVV runner is an orchestration tool for local gates and planned/manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, SIEM owner handoff confirmation, customer-pack generation, or customer-pack validation.
+The TEVV runner is an orchestration tool for local gates and manual target gates. It does not replace Oracle Linux Server 9.6 target validation, root runtime/systemd validation, or SIEM owner handoff confirmation.
+
+## MR pre-merge CI evidence gate
+
+Before merging release-hardening CI/CD changes to `main`, confirm the merge request pipeline passed these jobs on the final source branch HEAD:
+
+- `verify`
+- `tevv_local`
+- `customer_pack`
+- `source_pack`
+
+Confirm the following before merge:
+
+- CI jobs use the pinned Iron Bank Python 3.9 image.
+- CI sets `OAD_ALLOW_CI_PY39_PATCH_DRIFT=1` only for CI Python 3.9.x patch-level drift.
+- Local release validation remains pinned to Python 3.9.2 exactly.
+- Customer-pack generation does not require `git` inside the CI image.
+- Source-pack generation and manifest validation pass.
+- CI artifacts are treated as local engineering and package-readiness evidence only.
+- Target-site operational acceptance is not claimed.
+
+## CI/CD release workflow gate
+
+Review `docs/release/ci-cd-release-workflow.md` before release packaging or protected tag review.
+
+Minimum CI/CD expectations:
+
+- Merge request and default branch pipelines run `verify`, `tevv_local`, `customer_pack`, and `source_pack`.
+- Protected `v*` tag pipelines run `release_artifacts` and publish release checksums, TEVV reports, customer-pack artifacts, and source-pack artifacts.
+- Optional scheduled pipelines run the same local engineering and package-readiness drift checks on the protected default branch.
+- CI/CD artifacts support local engineering and package-readiness evidence only.
+- Target-site operational acceptance remains pending until target evidence exists.
 
 ## Sprint 2 documentation alignment gate
 
@@ -108,7 +145,7 @@ For Issue #39, customer-facing and release-facing docs must reflect the final Sp
 - `deploy/systemd/ecg-parser@.service` and `ecg-parser@<interface>.service` usage are documented.
 - `/etc/oad-parser/ecg_conf.ini` is documented as the target config path.
 - Filebeat/Elastic Agent handoff boundaries are documented, with final SIEM version/site config confirmed by the SIEM owner.
-- Internal engineering source pack workflows remain separate from the future customer runtime/operator handoff pack.
+- Internal engineering source pack workflows remain separate from the customer runtime/operator handoff pack.
 - Source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not required customer operational steps.
 
 ## Customer runtime/operator pack generation gate
@@ -117,7 +154,7 @@ Generate the customer runtime/operator handoff pack before customer release:
 
     bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
 
-Minimum manual checks until Issue #41 adds the customer-pack validator:
+Minimum customer-pack content expectations:
 
 - `CUSTOMER-PACK-MANIFEST.json` is present.
 - `config/ecg_conf.example.ini` is present.
@@ -132,7 +169,7 @@ The customer runtime/operator pack is separate from the internal engineering sou
 
 ## Customer-pack validation gate
 
-Issue #41 adds automated customer-pack validation:
+Automated customer-pack validation is available through `scripts/validate_customer_pack.py`:
 
     .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
 

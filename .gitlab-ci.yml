@@ -1,5 +1,16 @@
+default:
+  image:
+    name: "registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c"
+
 stages:
   - verify
+
+  - tevv
+  - package
+  - release
+variables:
+  PYTHON_BIN: "python3"
+  OAD_ALLOW_CI_PY39_PATCH_DRIFT: "1"
 
 workflow:
   rules:
@@ -9,6 +20,8 @@ workflow:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web"'
       when: always
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
     - when: never
 
 verify:
@@ -16,7 +29,8 @@ verify:
   image:
     name: "registry1.dso.mil/ironbank/redhat/python/python39@sha256:f42d3aec983c9f3124e02d3f72dc1b54d9ed7d83458867301a9549b4b647d03c"
   script:
-    - bash scripts/verify.sh
+    - python3 --version
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/verify.sh
   artifacts:
     when: always
     expire_in: 14 days
@@ -28,3 +42,130 @@ verify:
       - reports/validation/
       - reports/source-pack/source-pack-result.json
       - reports/source-pack/source-pack-manifest-check.json
+
+tevv_local:
+  stage: tevv
+  script:
+    - python3 --version
+    - |
+      set +e
+      PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+      tevv_rc=$?
+      echo "== TEVV report markdown =="
+      if [ -f reports/tevv/tevv-report.md ]; then
+        cat reports/tevv/tevv-report.md
+      else
+        echo "reports/tevv/tevv-report.md not found"
+      fi
+      echo "== TEVV report JSON =="
+      if [ -f reports/tevv/tevv-report.json ]; then
+        cat reports/tevv/tevv-report.json
+      else
+        echo "reports/tevv/tevv-report.json not found"
+      fi
+      echo "== TEVV customer-pack generation stdout =="
+      if [ -f reports/tevv/customer-pack/customer-pack-generation.stdout.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-generation.stdout.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-generation.stdout.txt not found"
+      fi
+      echo "== TEVV customer-pack generation stderr =="
+      if [ -f reports/tevv/customer-pack/customer-pack-generation.stderr.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-generation.stderr.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-generation.stderr.txt not found"
+      fi
+      echo "== TEVV customer-pack validation stdout =="
+      if [ -f reports/tevv/customer-pack/customer-pack-validation.stdout.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-validation.stdout.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-validation.stdout.txt not found"
+      fi
+      echo "== TEVV customer-pack validation stderr =="
+      if [ -f reports/tevv/customer-pack/customer-pack-validation.stderr.txt ]; then
+        cat reports/tevv/customer-pack/customer-pack-validation.stderr.txt
+      else
+        echo "reports/tevv/customer-pack/customer-pack-validation.stderr.txt not found"
+      fi
+      exit "$tevv_rc"
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/tevv/
+      - reports/tests/junit.xml
+      - reports/validation/
+      - reports/source-pack/
+      - reports/customer-pack/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+customer_pack:
+  stage: package
+  script:
+    - python3 --version
+    - mkdir -p reports/customer-pack
+    - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime.tar.gz --output-json reports/customer-pack/customer-pack-validation.json
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/customer-pack/oad-parser-customer-runtime.tar.gz
+      - reports/customer-pack/customer-pack-validation.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+source_pack:
+  stage: package
+  script:
+    - python3 --version
+    - mkdir -p reports/source-pack
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack.tar.gz --output-json reports/source-pack/source-pack-manifest-check.json
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - reports/source-pack/oad-parser-source-pack.tar.gz
+      - reports/source-pack/source-pack-manifest-check.json
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+
+release_artifacts:
+  stage: release
+  script:
+    - python3 --version
+    - test -n "$CI_COMMIT_TAG"
+    - mkdir -p reports/release reports/customer-pack reports/source-pack reports/tevv
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    - bash scripts/make_customer_pack.sh reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/validate_customer_pack.py --pack reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz --output-json reports/customer-pack/customer-pack-validation-${CI_COMMIT_TAG}.json
+    - PYTHON_BIN="$PYTHON_BIN" bash scripts/make_source_pack.sh reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz
+    - PYTHON_BIN="$PYTHON_BIN" "$PYTHON_BIN" scripts/check_source_pack_manifest.py --pack reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz --output-json reports/source-pack/source-pack-manifest-check-${CI_COMMIT_TAG}.json
+    - sha256sum reports/customer-pack/oad-parser-customer-runtime-${CI_COMMIT_TAG}.tar.gz reports/source-pack/oad-parser-source-pack-${CI_COMMIT_TAG}.tar.gz > reports/release/SHA256SUMS-${CI_COMMIT_TAG}.txt
+  artifacts:
+    when: always
+    expire_in: 1 year
+    reports:
+      junit: reports/tests/junit.xml
+    paths:
+      - reports/release/
+      - reports/customer-pack/oad-parser-customer-runtime-*.tar.gz
+      - reports/customer-pack/customer-pack-validation-*.json
+      - reports/source-pack/oad-parser-source-pack-*.tar.gz
+      - reports/source-pack/source-pack-manifest-check-*.json
+      - reports/tevv/
+      - reports/tests/junit.xml
+      - reports/validation/
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9].*/'

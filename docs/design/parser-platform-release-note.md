@@ -148,4 +148,4 @@ Release-facing highlights:
 - Active output is `/nsm/ecg/ecg-current.json`, containing JSON Lines despite the `.json` suffix.
 - Audit output is `/nsm/ecg/ecg-audit.jsonl`.
 - Status output is `/nsm/ecg/ecg-status.json`.
-- Internal engineering source-pack workflows remain separate from future customer runtime/operator package workflows.
+- Internal engineering source-pack workflows remain separate from customer runtime/operator package workflows.

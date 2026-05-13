@@ -165,7 +165,13 @@ def run_local_gates(args: argparse.Namespace, report_dir: Path) -> List[Dict[str
             command=[
                 py,
                 "-c",
-                "import sys; assert sys.version_info[:3] == (3, 9, 2), sys.version; print(sys.version)",
+                (
+                    "import os, sys; "
+                    "allow=os.environ.get('OAD_ALLOW_CI_PY39_PATCH_DRIFT') == '1'; "
+                    "ok=(sys.version_info[:2] == (3, 9)) if allow else (sys.version_info[:3] == (3, 9, 2)); "
+                    "assert ok, sys.version; "
+                    "print(sys.version)"
+                ),
             ],
             report_dir=report_dir,
             stdout_path=report_dir / "python-version.txt",
