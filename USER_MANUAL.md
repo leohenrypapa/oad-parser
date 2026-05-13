@@ -135,7 +135,7 @@ A mismatch means parser behavior changed or the comparison expectation was not m
 
 ## Production live parser notes
 
-Sprint 2 live parser work keeps the existing bounded `capture` command separate from the planned production `live` command. The production command will use the active runtime output path `/nsm/ecg/ecg-current.json`. That file keeps the `.json` suffix for legacy/runtime familiarity, but its content is JSON Lines: one JSON object per line.
+Sprint 2 live parser work keeps the existing bounded `capture` command separate from the implemented production `live` command. The production command uses the active runtime output path `/nsm/ecg/ecg-current.json`. That file keeps the `.json` suffix for legacy/runtime familiarity, but its content is JSON Lines: one JSON object per line.
 
 Closed rotated output files use UTC timestamped `.jsonl` names such as `/nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl`. If a rotated filename already exists, the writer appends a numeric suffix such as `-0001`.
 

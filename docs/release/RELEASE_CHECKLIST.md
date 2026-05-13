@@ -110,3 +110,22 @@ For Issue #39, customer-facing and release-facing docs must reflect the final Sp
 - Filebeat/Elastic Agent handoff boundaries are documented, with final SIEM version/site config confirmed by the SIEM owner.
 - Internal engineering source pack workflows remain separate from the future customer runtime/operator handoff pack.
 - Source-pack, corpus, golden-fixture, TEVV, and AI/dev workflows are not required customer operational steps.
+
+## Customer runtime/operator pack generation gate
+
+Generate the customer runtime/operator handoff pack before customer release:
+
+    bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
+
+Minimum manual checks until Issue #41 adds the customer-pack validator:
+
+- `CUSTOMER-PACK-MANIFEST.json` is present.
+- `config/ecg_conf.example.ini` is present.
+- `deploy/systemd/ecg-parser@.service` is present.
+- `docs/ops/systemd-live-parser.md` is present.
+- `docs/ops/filebeat-elastic-agent-handoff.md` is present.
+- `USER_MANUAL.md` is present.
+- `AI_CONTEXT.md`, `.gitlab-ci.yml`, `CODEOWNERS`, `standards-manifest.json`, `oad_parser/tests/`, and internal source-pack scripts are absent.
+- Generated reports, runtime outputs, archives, PCAPs, raw payloads, secrets, and site-specific values are absent.
+
+The customer runtime/operator pack is separate from the internal engineering source pack. Do not replace or degrade `scripts/make_source_pack.sh` or `oad_parser create-source-pack`.
