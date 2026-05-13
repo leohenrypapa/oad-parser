@@ -49,12 +49,22 @@ fi
 
 PY_VERSION="$($PYTHON_BIN -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
 "$PYTHON_BIN" - <<'EOF_PYVER'
+import os
 import sys
-if sys.version_info[:3] != (3, 9, 2):
-    raise SystemExit(
-        "ERROR: Python 3.9.2 is required; found %s.%s.%s"
-        % sys.version_info[:3]
-    )
+
+allow_ci_patch_drift = os.environ.get("OAD_ALLOW_CI_PY39_PATCH_DRIFT") == "1"
+if allow_ci_patch_drift:
+    if sys.version_info[:2] != (3, 9):
+        raise SystemExit(
+            "ERROR: Python 3.9.x is required in CI; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
+else:
+    if sys.version_info[:3] != (3, 9, 2):
+        raise SystemExit(
+            "ERROR: Python 3.9.2 is required; found %s.%s.%s"
+            % sys.version_info[:3]
+        )
 EOF_PYVER
 
 echo "== oad-parser quickstart check =="
