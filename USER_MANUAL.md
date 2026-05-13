@@ -137,9 +137,31 @@ A mismatch means parser behavior changed or the comparison expectation was not m
 
 Sprint 2 live parser work keeps the existing bounded `capture` command separate from the planned production `live` command. The production command will use the active runtime output path `/nsm/ecg/ecg-current.json`. That file keeps the `.json` suffix for legacy/runtime familiarity, but its content is JSON Lines: one JSON object per line.
 
+Closed rotated output files use UTC timestamped `.jsonl` names such as `/nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl`. If a rotated filename already exists, the writer appends a numeric suffix such as `-0001`.
+
+Storage protection prunes only closed rotated output files. It does not delete the active output file, active audit file, active status file, or unrelated operator files. At or above 75 percent disk usage, the service should prune closed files and block output if still above threshold. At or above 95 percent, the service should emit best-effort evidence and exit nonzero for systemd failure handling.
+
 Valid ECG event records may include `parse_warnings` when the parser can emit the event but also detects a non-fatal parse issue such as an unmapped ECG message code. Parse warnings include `code`, `message`, and `parser_stage`. Parse warnings do not convert the event into an `ecg_parse_error`. Malformed ECG-looking payloads still emit `ecg_parse_error` records.
 
 MVP Filebeat/Elastic Agent handoff collects append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`. `/nsm/ecg/ecg-status.json` is local-only for operators unless a later requirement adds central status ingestion.
+
+`/nsm/ecg/ecg-audit.jsonl` is JSON Lines audit output. `/nsm/ecg/ecg-status.json` is replaced as a single JSON object and is intended for local operator checks, not MVP central ingestion.
+
+Filebeat and Elastic Agent handoff guidance is available at `docs/ops/filebeat-elastic-agent-handoff.md`. MVP central collection uses append-style files only: `/nsm/ecg/ecg-current.json` and `/nsm/ecg/ecg-audit.jsonl`.
+
+Synthetic acceptance harness example:
+
+    python3.9 scripts/run_live_acceptance_6100pps.py --duration-seconds 1 --target-pps 6100 --output reports/validation/live-acceptance-6100pps.json
+
+This harness uses synthetic in-memory frames only. It does not replace target-environment one-hour operational acceptance.
+
+Live command smoke example:
+
+    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
+
+The `--max-frames` option is for test and smoke runs only. Do not use it in the production systemd service.
+
+Systemd template documentation is available at `docs/ops/systemd-live-parser.md`. The template service is `deploy/systemd/ecg-parser@.service` and should be installed as `/etc/systemd/system/ecg-parser@.service`.
 
 ## What files are safe to share
 

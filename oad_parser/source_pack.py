@@ -21,6 +21,7 @@ from typing import Dict, List, Tuple, Union
 
 DEFAULT_INCLUDED_TOP_LEVEL = {
     "config",
+    "deploy",
     "docs",
     "scripts",
     "oad_parser",
@@ -98,6 +99,7 @@ ALLOWED_DOTFILES = {
 INCLUDED_DOC_SUBDIRS = {
     "adr",
     "design",
+    "ops",
     "release",
 }
 
@@ -306,6 +308,16 @@ def iter_source_pack_files(
 
 
 def should_include_source_pack_path(relative_path: Union[str, Path]) -> bool:
+    # SPRINT2_OPERATOR_HANDOFF_INCLUDES: keep operator handoff docs self-contained in source packs.
+    explicit_sprint2_operator_handoff_includes = {
+        "deploy/systemd/ecg-parser@.service",
+        "docs/ops/systemd-live-parser.md",
+        "docs/ops/filebeat-elastic-agent-handoff.md",
+    }
+    normalized_relative_path = str(relative_path).replace("\\", "/").lstrip("./")
+    if normalized_relative_path in explicit_sprint2_operator_handoff_includes:
+        return True
+
     relative = Path(relative_path)
     parts = relative.parts
 
