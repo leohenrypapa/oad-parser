@@ -47,17 +47,21 @@ class LiveCaptureFrame:
     interface: str
     capture_time_utc: datetime
     frame_length: Optional[int] = None
+    sequence_number: Optional[int] = None
 
     def __post_init__(self) -> None:
         if self.frame_length is None:
             self.frame_length = len(self.frame_bytes)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        record = {
             "interface": self.interface,
             "capture_time_utc": format_utc_timestamp(self.capture_time_utc),
             "frame_length": self.frame_length,
         }
+        if self.sequence_number is not None:
+            record["sequence_number"] = self.sequence_number
+        return record
 
 
 @dataclass
