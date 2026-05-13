@@ -143,3 +143,9 @@ A valid generated customer pack should return exit code 0 and report `"status": 
 Use `docs/release/target-environment-validation.md` for target validation before operational acceptance.
 
 The checklist separates parser-owned `/nsm/ecg` outputs from SIEM-owned Filebeat/Elastic Agent configuration and documents that pass/fail live validation applies only to connected ECG interfaces.
+
+## Customer pack target-validation checklist inclusion
+
+The customer runtime/operator handoff pack includes `docs/release/target-environment-validation.md`.
+
+This checklist is customer-facing operator guidance for Oracle Linux Server 9.6, Python 3.9.2, root/systemd runtime validation, `/nsm/ecg` outputs, connected ECG interface validation, and Filebeat/Elastic Agent SIEM handoff assumptions.

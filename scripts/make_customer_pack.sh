@@ -48,6 +48,7 @@ DOCS_REQUIRED = [
     "docs/ops/filebeat-elastic-agent-handoff.md",
     "docs/release/CUSTOMER_HANDOFF.md",
     "docs/release/RELEASE_CHECKLIST.md",
+    "docs/release/target-environment-validation.md",
 ]
 
 EXCLUDED_EXACT = {
