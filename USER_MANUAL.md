@@ -232,7 +232,7 @@ Supported release-validation runtime: Python 3.9.2 exactly. See `START_HERE.md` 
 
 The Sprint 2 implementation includes the production live parser command:
 
-    .venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1
+    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1
 
 Expected operational files:
 

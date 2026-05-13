@@ -1,5 +1,12 @@
 # OAD Parser
 
+
+## Python runtime boundary
+
+Customer target execution uses the customer-provided Python 3.9.2 interpreter, normally invoked as `python3.9`.
+
+Customer runtime and target-validation commands should use the target system Python 3.9.2 interpreter. Developer virtual-environment paths are internal maintainer guidance and are not customer runtime requirements.
+
 ## Current live parser handoff posture
 
 The Sprint 2 live parser is implemented and the default customer-facing operational path is `oad_parser live`.
@@ -208,10 +215,10 @@ Python 3.9.2 for release validation is supported for customer runtime validation
 
 - Target runtime validation must be run with Python 3.9.2 before customer handoff.
 - Recommended validation commands:
-  - .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
-  - .venv/bin/python -m oad_parser --help
-  - .venv/bin/python -m oad_parser validate-platform
-  - PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
+  - python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
+  - python3.9 -m oad_parser --help
+  - python3.9 -m oad_parser validate-platform
+  - PYTHON_BIN=python3.9 bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
 - The `capture` command requires bounded capture with `--max-frames` or `[capture] max_frames` in config. Continuous capture is not enabled for JSONL handoff output.
 - `validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
 - A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat this as a validation failure until the input format and parser selection are confirmed.

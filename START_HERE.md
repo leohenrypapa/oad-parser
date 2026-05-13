@@ -1,5 +1,12 @@
 # OAD Parser - Start Here
 
+
+## Python runtime boundary
+
+Customer target execution uses the customer-provided Python 3.9.2 interpreter, normally invoked as `python3.9`.
+
+Customer runtime and target-validation commands should use the target system Python 3.9.2 interpreter. Developer virtual-environment paths are internal maintainer guidance and are not customer runtime requirements.
+
 ## Customer operator start point
 
 For the Sprint 2 live parser baseline, start with the live parser operator path:
@@ -80,12 +87,12 @@ These checks prove the local package, CLI command surface, synthetic fixture pat
 Collect this evidence before customer handoff in the target Python 3.9.2 environment:
 
     python3.9 --version
-    .venv/bin/python -m compileall -q oad_parser
-    .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
-    .venv/bin/python -m oad_parser --help
-    .venv/bin/python -m oad_parser validate-platform
-    .venv/bin/python -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
-    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
+    python3.9 -m compileall -q oad_parser
+    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
+    python3.9 -m oad_parser --help
+    python3.9 -m oad_parser validate-platform
+    python3.9 -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
+    PYTHON_BIN=python3.9 bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack.tar.gz
 
 ## Git-checkout release validation
 
@@ -95,7 +102,7 @@ Run from a Git checkout only:
 
     scripts/validate_sanitized_release.sh
     scripts/validate_release_readiness.sh
-    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
+    PYTHON_BIN=python3.9 bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
 
 Equivalent Make targets from a Git checkout:
 

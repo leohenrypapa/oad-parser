@@ -1,5 +1,12 @@
 # Release Checklist
 
+
+## Python runtime boundary
+
+Customer target execution uses the customer-provided Python 3.9.2 interpreter, normally invoked as `python3.9`.
+
+Customer runtime and target-validation commands should use the target system Python 3.9.2 interpreter. Developer virtual-environment paths are internal maintainer guidance and are not customer runtime requirements.
+
 ## Sprint 2 closeout reference
 
 Before executing Sprint 3 release-hardening gates, review:
@@ -31,15 +38,15 @@ Supported release-validation runtime: Python 3.9.2 exactly.
 Run from the repository root:
 
     git status --short
-    .venv/bin/python -c 'import sys; assert sys.version_info[:3] == (3, 9, 2), sys.version'
-    PYTHON_BIN=.venv/bin/python bash scripts/verify.sh
-    .venv/bin/python -m unittest discover -s oad_parser/tests -p "test_*.py"
-    .venv/bin/python -m oad_parser validate-platform
-    .venv/bin/python scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    python3.9 -c 'import sys; assert sys.version_info[:3] == (3, 9, 2), sys.version'
+    PYTHON_BIN=python3.9 bash scripts/verify.sh
+    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
+    python3.9 -m oad_parser validate-platform
+    python3.9 scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
     bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
-    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
-    PYTHON_BIN=.venv/bin/python bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
-    .venv/bin/python scripts/check_source_pack_manifest.py --pack /tmp/oad-parser-source-pack-final.tar.gz --output-json /tmp/oad-source-pack-manifest-check.json
+    python3.9 scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+    PYTHON_BIN=python3.9 bash scripts/make_source_pack.sh /tmp/oad-parser-source-pack-final.tar.gz
+    python3.9 scripts/check_source_pack_manifest.py --pack /tmp/oad-parser-source-pack-final.tar.gz --output-json /tmp/oad-source-pack-manifest-check.json
 
 ## Source-pack gate
 
@@ -94,7 +101,7 @@ Evidence handling requirements:
 
 For the local release-hardening evidence bundle, run:
 
-    .venv/bin/python scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
+    python3.9 scripts/run_tevv_suite.py --profile local --report-dir reports/tevv
 
 Expected generated evidence:
 
@@ -171,7 +178,7 @@ The customer runtime/operator pack is separate from the internal engineering sou
 
 Automated customer-pack validation is available through `scripts/validate_customer_pack.py`:
 
-    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+    python3.9 scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
 
 The validator must pass before customer handoff. It checks:
 

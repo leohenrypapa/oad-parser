@@ -9,7 +9,7 @@ if [ -z "$OUT" ]; then
   exit 2
 fi
 
-DEFAULT_PYTHON="$ROOT_DIR/.venv/bin/python"
+DEFAULT_PYTHON="python3.9"
 PY="${PYTHON_BIN:-${PYTHON:-$DEFAULT_PYTHON}}"
 
 if [ ! -x "$PY" ]; then

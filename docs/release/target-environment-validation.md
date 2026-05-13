@@ -6,6 +6,13 @@ This checklist defines target-environment validation for the OAD parser Sprint 2
 
 This checklist is documentation-only. It does not execute target validation, automate privileged deployment, create site-specific Filebeat/Elastic Agent configuration, change parser/runtime behavior, implement one-hour 6100 PPS mode, or add radar semantics.
 
+
+## Python runtime boundary
+
+Customer target execution uses the customer-provided Python 3.9.2 interpreter, normally invoked as `python3.9`.
+
+Customer runtime and target-validation commands should use the target system Python 3.9.2 interpreter. Developer virtual-environment paths are internal maintainer guidance and are not customer runtime requirements.
+
 ## Scope and assumptions
 
 Target environment assumptions:
@@ -92,7 +99,7 @@ Owner role: release engineer and target operator.
 Commands to run before target copy:
 
     bash scripts/make_customer_pack.sh /tmp/oad-parser-customer-runtime.tar.gz
-    .venv/bin/python scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
+    python3.9 scripts/validate_customer_pack.py --pack /tmp/oad-parser-customer-runtime.tar.gz --output-json /tmp/oad-customer-pack-validation.json
     grep -n '"status": "passed"' /tmp/oad-customer-pack-validation.json
 
 Target copy checklist:
