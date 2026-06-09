@@ -1,13 +1,11 @@
-# OAD Parser Customer Runtime Pack Publication
+# Customer Pack Publication
 
-Source repo: rapid-capabilities-oad-parser
-Source commit: 358bfc837b7fdeb63cd86e611798b1a624d9369e
-Source branch: main
-Published to: git@github.com:leohenrypapa/oad-parser.git
-Generated at UTC: 2026-06-09T17:49:40Z
+Customer runtime packs are published as GitHub Release assets, not committed as repository files.
 
-## Boundary
+Latest source commit:
+2921953b77334aff3a3c90cbf140edf8187ccdf0
 
-This repository contains the generated customer runtime pack only.
+Latest release tag:
+customer-pack-20260609T211542Z-2921953b7733
 
-It does not claim target-site acceptance. Target-site acceptance must be completed on the deployment environment.
+Target-site acceptance is not claimed by publication. Confirm Sensor5 pcap or live-stream smoke separately.
