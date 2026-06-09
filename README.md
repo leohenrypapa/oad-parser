@@ -1,6 +1,6 @@
 # OAD Parser Customer Runtime
 
-This repository publishes the OAD Parser customer runtime pack.
+This repository mirrors the current OAD Parser customer runtime and publishes the installable customer pack as a GitHub Release asset.
 
 ## Latest customer pack
 
@@ -13,14 +13,15 @@ oad-parser-customer-runtime-20260609T212256Z-2921953b7733.tar.gz
 SHA256:
 aff21881b539b23abc02ff6ae3997e53a8de1708833aace945ac9621eef5662f
 
-Source commit:
-2921953b77334aff3a3c90cbf140edf8187ccdf0
+## Sensor5 parser fix marker
 
-## How to find it on GitHub
+The current runtime includes the Sensor5 parser fix in:
 
-Open this repository in the browser, then go to Releases. The customer pack is attached as a release asset.
+oad_parser/parsers/ecg.py
 
-The tarball is intentionally not committed into the repository file tree.
+Expected markers:
+- record.extra["classification_flags"] = ["rtqc_bit_set"]
+- record.fingerprint = sha256(
 
 ## Acceptance boundary
 

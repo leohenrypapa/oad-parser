@@ -1,8 +1,8 @@
 """Hash helpers for parser fingerprints.
 
 Parser fingerprints are non-security identifiers used for deterministic
-comparison and test fixtures. Hardened OpenSSL/FIPS environments may reject MD5
-unless it is explicitly marked as non-security use.
+comparison and test fixtures. SHA-256 is the authoritative fingerprint format.
+The MD5 helper remains only for legacy fixture compatibility.
 """
 
 from __future__ import annotations
@@ -28,3 +28,10 @@ def md5(data: bytes = b"", *args: Any, **kwargs: Any) -> "hashlib._Hash":
         compat_kwargs = dict(kwargs)
         compat_kwargs.pop("usedforsecurity", None)
         return hashlib.md5(data, *args, **compat_kwargs)
+
+
+
+def sha256(data: bytes = b"", *args: Any, **kwargs: Any) -> "hashlib._Hash":
+    """Return a SHA-256 hash object for parser fingerprints."""
+
+    return hashlib.sha256(data, *args, **kwargs)

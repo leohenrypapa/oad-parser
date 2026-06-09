@@ -51,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-09T17:49:16Z",
+  "generated_at_utc": "2026-06-09T21:22:56Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -160,8 +160,8 @@
     },
     {
       "path": "oad_parser/decoders/cd2_radar.py",
-      "sha256": "13086f92a9636655c47a87e7c0fac3a4e58f96b20d184950797655f0a95e3e9c",
-      "size_bytes": 4660
+      "sha256": "5f1f7485a04093968b7cbb147f9d5438728ab5d3d8cf3257c344ddfde8711466",
+      "size_bytes": 4951
     },
     {
       "path": "oad_parser/decoders/provisional_beacon_constants.py",
@@ -190,8 +190,8 @@
     },
     {
       "path": "oad_parser/fingerprints.py",
-      "sha256": "872fcec6e59d1f2e8690a2f72d763b65ec8275be456d91c1394ace46114339a0",
-      "size_bytes": 980
+      "sha256": "cb57bf708a21d19a5a1a565e95beb6b3d444e8512e8996fff406ca5f1e1f0e7f",
+      "size_bytes": 1183
     },
     {
       "path": "oad_parser/ingest/__init__.py",
@@ -290,8 +290,8 @@
     },
     {
       "path": "oad_parser/parsers/ecg.py",
-      "sha256": "8c55e97dd38cf6e726d316ab784df4d0d65cce6275dc60c6e4160081eb91eead",
-      "size_bytes": 25264
+      "sha256": "541e855473709a228f4fd9817092c2216a9d51cc40447f28157ba3fe654a2081",
+      "size_bytes": 25075
     },
     {
       "path": "oad_parser/protocols/__init__.py",
@@ -320,8 +320,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "a5d74b088f0692a19efdbaaeb24339ad2a33e5feca8f776c4e6f6992ab973678",
-      "size_bytes": 6120
+      "sha256": "bf02beda475170bc3dcf234504e8ef943527bb6fec275585f9a606b696f4b1b7",
+      "size_bytes": 6888
     },
     {
       "path": "pyproject.toml",
@@ -373,13 +373,13 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "clean",
-    "generated_at_utc": "2026-06-09T17:49:16Z",
+    "generated_at_utc": "2026-06-09T21:22:56Z",
     "generated_by_python": "3.9.2",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
     "pack_format_version": "customer-runtime-operator-pack.v2",
     "source_branch": "main",
-    "source_commit": "358bfc837b7fdeb63cd86e611798b1a624d9369e",
+    "source_commit": "2921953b77334aff3a3c90cbf140edf8187ccdf0",
     "source_remote_or_project": "rapid-capabilities-oad-parser",
     "validation_report_path": null,
     "validation_report_sha256": null

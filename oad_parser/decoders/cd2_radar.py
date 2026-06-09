@@ -16,8 +16,10 @@ from oad_parser.decoders.provisional_beacon_constants import (
     ALTITUDE_VALUE_MASK,
     ALTITUDE_WORD_INDEX,
     ALTITUDE_WORD_MASK,
-    BEACON_CANDIDATE_RANGE_NM_SCALE,
     CD2_WORD_HEX_WIDTH,
+    LEGACY_RANGE_NM_SCALE,
+    LEGACY_RANGE_WORD_MASK,
+    LEGACY_RANGE_WORD_SHIFT,
     MODE_3_WORD_INDEX,
     RANGE_WORD_INDEX,
     WORD_DATA_MASK,
@@ -88,9 +90,14 @@ def decode_beacon_candidate_words(
     }
 
     if len(words) > RANGE_WORD_INDEX:
-        result["range_nm"] = (
-            words[RANGE_WORD_INDEX] & WORD_DATA_MASK
-        ) * BEACON_CANDIDATE_RANGE_NM_SCALE
+        range_word = words[RANGE_WORD_INDEX]
+        if input_basis == BEACON_CANDIDATE_INPUT_BASIS:
+            result["range_nm"] = (range_word & WORD_DATA_MASK) * LEGACY_RANGE_NM_SCALE
+        else:
+            result["range_nm"] = (
+                (range_word & LEGACY_RANGE_WORD_MASK)
+                >> LEGACY_RANGE_WORD_SHIFT
+            ) * LEGACY_RANGE_NM_SCALE
 
     if len(words) > ACP_WORD_INDEX:
         acp = words[ACP_WORD_INDEX] & WORD_DATA_MASK

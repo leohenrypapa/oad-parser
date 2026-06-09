@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List
 
+from oad_parser.decoders.cd2_radar import decode_beacon_candidate_words
 from oad_parser.live.records import EcgOutputRecord, EcgParseErrorRecord, sha256_hex
 from oad_parser.parsers.ecg import (
     EcgEnvelopeParseIssue,
@@ -124,8 +125,9 @@ def legacy_fields_for_envelope(
 ) -> Dict[str, Any]:
     """Return legacy-compatible fields for a valid ECG envelope.
 
-    The transformer does not add new radar semantics. Fields that are part of
-    the known legacy shape but are not parsed in this layer are emitted as None.
+    The transformer projects the same provisional beacon/search fields used by
+    the parser and decoder paths so live output does not suppress Sensor5 plot
+    fields after the ECG envelope has been parsed.
     """
 
     fields: Dict[str, Any] = {
@@ -144,11 +146,30 @@ def legacy_fields_for_envelope(
         "sha256_ecg_payload": sha256_hex(ecg_payload),
     }
 
-    for name in LEGACY_NULL_FIELDS:
-        fields[name] = None
+    fields.update(_project_plot_fields(envelope))
 
     if parse_warnings:
         fields["parse_warnings"] = _parse_warning_dicts(parse_warnings)
+
+    return fields
+
+
+
+def _project_plot_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:
+    fields: Dict[str, Any] = {name: None for name in LEGACY_NULL_FIELDS}
+
+    if envelope.message_type in {"beacon", "search"}:
+        decoded = decode_beacon_candidate_words(
+            envelope.data_words,
+            input_basis="ecg_envelope_16bit_words",
+        )
+        for name in ("range_nm", "azimuth_degrees", "altitude_feet", "mode_3_code", "acp"):
+            fields[name] = decoded.get(name)
+        return fields
+
+    if envelope.message_type == "rtqc":
+        fields["alert"] = "RTQC"
+        fields["alert_details"] = "RTQC message detected."
 
     return fields
 

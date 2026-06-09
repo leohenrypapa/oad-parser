@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from oad_parser.fingerprints import md5
+from oad_parser.fingerprints import sha256
 from typing import Iterable
 
 from oad_parser.decoders.provisional_beacon_constants import (
@@ -482,11 +482,7 @@ def parse_frame(
         else:
             record.message_type = "none"
 
-        if rtqc_message:
-            record.alert = "RTQC"
-            record.alert_details = "RTQC message detected."
-            records.append(record)
-        elif (beacon_message or search_message) and record.message in {"cd-2", "cd-asr", "mar"}:
+        if (beacon_message or search_message) and record.message in {"cd-2", "cd-asr", "mar"}:
             _extract_plot_words(
                 payload=payload,
                 message_payload_start=message_payload_start,
@@ -496,10 +492,16 @@ def parse_frame(
                 modec_valid=modec_valid,
                 record=record,
             )
-            record.fingerprint = md5(
+            record.fingerprint = sha256(
                 payload[:ECG_MESSAGE_BLOCK_HEADER_BYTES]
                 + payload[message_payload_start:message_payload_end]
             ).hexdigest()
+            if rtqc_message:
+                record.extra["classification_flags"] = ["rtqc_bit_set"]
+            records.append(record)
+        elif rtqc_message:
+            record.alert = "RTQC"
+            record.alert_details = "RTQC message detected."
             records.append(record)
 
         offset = message_payload_end
@@ -644,15 +646,6 @@ def _extract_plot_words(
         if word_offset + BYTES_PER_WORD > message_payload_end:
             break
 
-        first_byte = payload[word_offset]
-        parity_error = (
-            (first_byte & WORD_PARITY_ERROR_MASK) >> WORD_PARITY_ERROR_SHIFT == 1
-        )
-        malfunction = (first_byte & WORD_MALFUNCTION_MASK) >> WORD_MALFUNCTION_SHIFT == 1
-
-        if parity_error or malfunction:
-            continue
-
         word = int.from_bytes(
             payload[word_offset : word_offset + BYTES_PER_WORD], BYTE_ORDER
         )
@@ -660,7 +653,7 @@ def _extract_plot_words(
         if index == RANGE_WORD_INDEX:
             record.range_nm = int((word & RANGE_WORD_MASK) >> RANGE_WORD_SHIFT) * RANGE_NM_SCALE
         elif index == ACP_WORD_INDEX:
-            record.acp = word
+            record.acp = word & ACP_WORD_MASK
             record.azimuth_degrees = int(word & ACP_WORD_MASK) * ACP_DEGREES_PER_COUNT
         elif index == MODE_3_WORD_INDEX:
             record.mode_3_code = int(oct(int(word & MODE_3_WORD_MASK))[2:])
