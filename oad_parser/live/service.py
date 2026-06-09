@@ -146,6 +146,8 @@ def run_live_service(
                 if record_sink is not None:
                     write_result = record_sink(record)
                 _update_metrics_from_write_result(resolved_metrics, write_result)
+                if getattr(write_result, "bytes_written", None) == 0:
+                    continue
                 records_emitted += 1
             except Exception as exc:
                 resolved_metrics.increment("output_drops")

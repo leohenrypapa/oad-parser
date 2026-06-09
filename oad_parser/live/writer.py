@@ -66,6 +66,13 @@ class RotatingJsonlWriter:
 
     def write_record(self, record: Dict[str, object]) -> JsonlWriteResult:
         payload = _encode_jsonl_record(record)
+
+        if not payload:
+            return JsonlWriteResult(
+                active_path=str(self.active_path),
+                bytes_written=0,
+                rotated_path=None,
+            )
         rotated_path = self._rotate_if_needed(len(payload))
 
         self.active_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,12 +155,6 @@ class RotatingJsonlWriter:
         return self._active_file_size() > 0
 
 
-def _encode_jsonl_record(record: Dict[str, object]) -> bytes:
-    return (
-        json.dumps(record, sort_keys=True, separators=(",", ":"), default=str)
-        + "\n"
-    ).encode("utf-8")
-
 
 def _format_utc_rotation_timestamp(value: datetime) -> str:
     if value.tzinfo is None:
@@ -164,3 +165,108 @@ def _format_utc_rotation_timestamp(value: datetime) -> str:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+COMPACT_EVENT_DROP_FIELDS = {
+    "parser_name",
+    "parser_version",
+    "record_schema_version",
+    "package_profile",
+    "record_type",
+    "interface",
+    "ecg_message",
+    "message_code",
+    "message_data_length",
+    "modec_valid",
+    "parse_warnings",
+    "sha256_ecg_payload",
+}
+
+COMPACT_EVENT_RENAME_FIELDS = {
+    "source_ip": "source.ip",
+    "destination_ip": "destination.ip",
+    "source_port": "source.port",
+    "destination_port": "destination.port",
+    "ip_total_length": "tot.bytes",
+    "message_type": "type",
+}
+
+COMPACT_PROJECTABLE_MESSAGES = {"cd-2", "cd-asr", "mar"}
+COMPACT_PROJECTABLE_TYPES = {"beacon", "search", "rtqc"}
+COMPACT_PROJECTED_FIELDS = {
+    "range_nm",
+    "azimuth_degrees",
+    "altitude_feet",
+    "mode_3_code",
+    "acp",
+}
+
+
+def _encode_jsonl_record(record: Dict[str, object]) -> bytes:
+    encoded_record = _compact_live_event_record(record)
+    if encoded_record is None:
+        return b""
+
+    return (
+        json.dumps(encoded_record, sort_keys=True, separators=(",", ":"), default=str)
+        + "\n"
+    ).encode("utf-8")
+
+
+def _compact_live_event_record(record: Dict[str, object]) -> Optional[Dict[str, object]]:
+    if record.get("record_type") != "ecg_event":
+        return dict(record)
+
+    if not _should_emit_live_event(record):
+        return None
+
+    compact: Dict[str, object] = {}
+
+    for key, value in record.items():
+        if key in COMPACT_EVENT_DROP_FIELDS:
+            continue
+        if value is None or value == []:
+            continue
+
+        output_key = COMPACT_EVENT_RENAME_FIELDS.get(key, key)
+
+        if output_key == "fingerprint" and "fingerprint" in compact:
+            continue
+
+        compact[output_key] = value
+
+    event_type = compact.get("type")
+
+    if event_type == "search":
+        compact.setdefault("mode_3_code", -1)
+        compact.setdefault("altitude_feet", -1)
+
+    if event_type == "rtqc":
+        compact.setdefault("alert", "RTQC")
+        compact.setdefault("alert_details", "RTQC message detected.")
+        compact.setdefault("range_nm", -1)
+        compact.setdefault("mode_3_code", -1)
+        compact.setdefault("acp", -1)
+        compact.setdefault("azimuth_degrees", -1)
+        compact.setdefault("altitude_feet", -1)
+        compact["fingerprint"] = "none"
+
+    return compact
+
+
+def _should_emit_live_event(record: Dict[str, object]) -> bool:
+    message = record.get("message")
+    message_type = record.get("message_type")
+
+    if message is None and message_type is None:
+        return True
+
+    if message_type == "rtqc":
+        return True
+
+    if message not in COMPACT_PROJECTABLE_MESSAGES:
+        return False
+
+    if message_type not in COMPACT_PROJECTABLE_TYPES:
+        return False
+
+    return any(record.get(field) is not None for field in COMPACT_PROJECTED_FIELDS)

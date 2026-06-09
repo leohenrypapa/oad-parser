@@ -161,6 +161,7 @@ def legacy_fields_for_envelope(
         "message_data_length": envelope.message_data_length,
         "modec_valid": envelope.modec_valid,
         "sha256_ecg_payload": sha256_hex(ecg_payload),
+        "fingerprint": sha256_hex(envelope.message_payload or ecg_payload),
     }
 
     fields.update(_project_legacy_radar_fields(envelope))

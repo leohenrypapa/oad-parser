@@ -5,30 +5,33 @@ This repository mirrors the current OAD Parser customer runtime and publishes th
 ## Latest customer pack
 
 Release tag:
-customer-pack-20260609T215421Z-e4333966af5f
+customer-pack-20260609T224136Z-862cea33d1c2
 
 Asset:
-oad-parser-customer-runtime-20260609T215421Z-e4333966af5f.tar.gz
+oad-parser-customer-runtime-20260609T224136Z-862cea33d1c2.tar.gz
 
 SHA256:
-4914901ad620956eb1e84d22ad72c1ed6aca8d12be6248fb1735f0898c77cdee
+69738643129c149e6ab287c833d51cf3ae689c3e55a893ecb0179d8646dcd12b
 
 Source commit:
-e4333966af5fbc35a8424d1ced239d342a62739c
+862cea33d1c2d1a483df912aedd57fa7cc90116d
 
-## Sensor5 live transformer fix marker
+## Sensor5 compact-output fix markers
 
-The current runtime includes live field projection in:
+Expected runtime markers:
 
-oad_parser/transformers/legacy_ecg.py
+- oad_parser/live/writer.py
+  - COMPACT_EVENT_DROP_FIELDS
+  - COMPACT_EVENT_RENAME_FIELDS
+  - def _compact_live_event_record
+  - def _should_emit_live_event
 
-Expected markers:
-- PROJECTABLE_RADAR_MESSAGES = {"cd-2", "cd-asr", "mar"}
-- def _project_legacy_radar_fields
-- fields["range_nm"]
-- fields["azimuth_degrees"]
-- fields["mode_3_code"]
-- fields["altitude_feet"]
+- oad_parser/live/service.py
+  - skipped zero-byte compact records do not increment emitted counters
+
+- oad_parser/transformers/legacy_ecg.py
+  - per-message fingerprint
+  - projected live radar fields
 
 ## Acceptance boundary
 
