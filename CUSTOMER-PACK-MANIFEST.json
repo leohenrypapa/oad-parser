@@ -1,17 +1,28 @@
 {
   "committed_by_default": false,
-  "entry_count": 63,
+  "entry_count": 59,
   "excluded_by_default": [
     ".git",
     ".gitlab-ci.yml",
     "AI_CONTEXT.md",
     "CODEOWNERS",
+    "SOURCE-PACK-MANIFEST.json",
     "docs/release/STANDARDS_ADOPTION_CHECKLIST.md",
+    "oad_parser/corpus.py",
+    "oad_parser/corpus_report.py",
+    "oad_parser/fixture_samples.py",
+    "oad_parser/golden.py",
+    "oad_parser/platform_validation.py",
+    "oad_parser/source_pack.py",
     "scripts/check_source_pack_manifest.py",
     "scripts/inspect_pcap.sh",
     "scripts/make_source_pack.sh",
+    "scripts/quickstart_check.sh",
+    "scripts/run_live_acceptance_6100pps.py",
     "scripts/run_tests_junit.py",
+    "scripts/validate_customer_pack.py",
     "scripts/validate_local_pcaps.sh",
+    "scripts/validate_pre_site_readiness.sh",
     "scripts/validate_release_readiness.sh",
     "scripts/validate_sanitized_release.sh",
     "scripts/verify.sh",
@@ -40,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-05-13T21:26:37Z",
+  "generated_at_utc": "2026-06-09T17:49:16Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -49,23 +60,23 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "85ca04eb7a4d39b6beb2fec4ac247dfcee0713d76aed75fa33a92b0c7e64f319",
-      "size_bytes": 3019
+      "sha256": "b176a336260688c314d2e779481470820ad81d4bc43b35d26575c79bb957beaa",
+      "size_bytes": 4398
     },
     {
       "path": "README.md",
-      "sha256": "bcdfb8deccdf931de2dfd5f0a604ab121ffc2ad27f4e2c9c85845d478332be3f",
-      "size_bytes": 10555
+      "sha256": "0f236039ca2ed85c45aa6927a4ad2d26f1c7c07c73bd249c4f0a9c0fd3971e1a",
+      "size_bytes": 2959
     },
     {
       "path": "START_HERE.md",
-      "sha256": "0464843744ac9ba1f4772d1fb0bae9c86f0d86211c098fbcde79da21e622fd86",
-      "size_bytes": 6497
+      "sha256": "7ab645e4f098c62330cd25fa06175d24bb32a0f9b12b1b3d09d3f0deeb412de7",
+      "size_bytes": 2093
     },
     {
       "path": "USER_MANUAL.md",
-      "sha256": "9b62c8bd3318fec36de351db24e7749191b1273e76f98f50643007a341cbd691",
-      "size_bytes": 9691
+      "sha256": "99ade7b6331ad6eab9cd811b1619800b34a341cec79ae574372b6b2c0ae91307",
+      "size_bytes": 2292
     },
     {
       "path": "config/ecg_conf.example.ini",
@@ -84,13 +95,13 @@
     },
     {
       "path": "deploy/systemd/ecg-parser@.service",
-      "sha256": "d6b3c7804c66f043698dc01ef4f9a7929d6f4799214cd23d9cfd92bdf2297f69",
-      "size_bytes": 531
+      "sha256": "81eee4d2b656283c221b437554b214e92b8757769bbc56c4e9b6b95d2d1174a5",
+      "size_bytes": 544
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "6bfd5e7f5a76d04e396762e6281a4c4c6dcb9bd569ac9222e27099b4ea075034",
-      "size_bytes": 4919
+      "sha256": "64c4b671d8a6349de0887e4fe81d2ef957bd0db7402af155770a957bb9a79f90",
+      "size_bytes": 2681
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
@@ -99,27 +110,27 @@
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "ffb5d88063ec88ce139545a4dc8dae70ef50ea25ab21b1f0b2f88f3dcc7dea63",
-      "size_bytes": 4401
+      "sha256": "9d9272458eb772a01b4a51535e57e9023301c892057f05f96478cd9a9a8c50b9",
+      "size_bytes": 6591
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
-      "sha256": "93be91eb98bfa5feac6e74490d09ae80cc98b4d2d50ed95e86ee52d56f27ad7e",
-      "size_bytes": 7776
+      "sha256": "a7c574c3088aedad8921cb0571b769c1c538c23bf6e53780e58b8aaa9b964f57",
+      "size_bytes": 1662
     },
     {
       "path": "docs/release/RELEASE_CHECKLIST.md",
-      "sha256": "bbc21b69fc790e60b2929f1d363f900057f0b469cf8f1a71e4c5aa0548b4a6a3",
-      "size_bytes": 11019
+      "sha256": "941c13fb2c29bcd2f16f9d002789d272d060f9173508cd33843903b2fa110b34",
+      "size_bytes": 1594
     },
     {
       "path": "docs/release/target-environment-validation.md",
-      "sha256": "078d7cf0ae61b82cff1f639c9ec1bbce0655ac659fe22ce9f091df751b820430",
-      "size_bytes": 15700
+      "sha256": "633ef39d3b435392bd4f8302ea22d6fbf0356f6027f24acdfa1f30f6c80e4608",
+      "size_bytes": 3115
     },
     {
       "path": "oad_parser/__init__.py",
-      "sha256": "8f0596fc6f0dc08f4c26891baaf7ddcb8de8cdc3e42dedf680a0d9f018524a6d",
+      "sha256": "bb2474167b16b9f10598f2fcea13cca77a859d728e849f08b821144396cd35ef",
       "size_bytes": 50
     },
     {
@@ -129,8 +140,8 @@
     },
     {
       "path": "oad_parser/cli.py",
-      "sha256": "15b8f4e4e0f5b499ef58fbc1ef5320f7a82905c41d97ee9cffb73558ef406d2c",
-      "size_bytes": 31540
+      "sha256": "61297a3087e50b4a9436a82e302a714576816aaf32d186b20b0507f01bfd6e02",
+      "size_bytes": 32515
     },
     {
       "path": "oad_parser/compare.py",
@@ -141,16 +152,6 @@
       "path": "oad_parser/config.py",
       "sha256": "f558993dfa9e3e2ba190e90b9df059511bdd7d4bef47e128d2b8639c8a2535ae",
       "size_bytes": 14825
-    },
-    {
-      "path": "oad_parser/corpus.py",
-      "sha256": "4ac21a1c524d4ac92e8b7e88f210d5ea733f3a92660d9be0a24d84c792733cde",
-      "size_bytes": 6505
-    },
-    {
-      "path": "oad_parser/corpus_report.py",
-      "sha256": "c15ae8967cd458c5db6b4e6c8e6e350ae8d781ad9a218820fbde62a7f12a91a6",
-      "size_bytes": 4157
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -191,16 +192,6 @@
       "path": "oad_parser/fingerprints.py",
       "sha256": "872fcec6e59d1f2e8690a2f72d763b65ec8275be456d91c1394ace46114339a0",
       "size_bytes": 980
-    },
-    {
-      "path": "oad_parser/fixture_samples.py",
-      "sha256": "4f31072e7ec94f8d685982f5443b1e6478e929c16fc188692a8fe1a8b1c85128",
-      "size_bytes": 8277
-    },
-    {
-      "path": "oad_parser/golden.py",
-      "sha256": "0d329bf4f262330d652a42e2e1229f5d8353d92fd9d0be01076ffa329e16bcc8",
-      "size_bytes": 6228
     },
     {
       "path": "oad_parser/ingest/__init__.py",
@@ -259,13 +250,13 @@
     },
     {
       "path": "oad_parser/live/records.py",
-      "sha256": "572c82ce8441da773fb82c9c7d8e591b1979e3331aa49a3758a9907e5aaf9cd2",
-      "size_bytes": 6074
+      "sha256": "5c22f4163a471eb2571f3e24aa9ac867ac15b4db77072761854f05f9be7c99f1",
+      "size_bytes": 6868
     },
     {
       "path": "oad_parser/live/service.py",
-      "sha256": "4a4cb8d645fe80e469525f8ed54fd4d37434d51852d75736b52d4572475abf7a",
-      "size_bytes": 10958
+      "sha256": "9598b10027f80f78decac27066cfa961cde2fd4a4f67b1ee0f1449f55d69b7f2",
+      "size_bytes": 13562
     },
     {
       "path": "oad_parser/live/storage.py",
@@ -303,11 +294,6 @@
       "size_bytes": 25264
     },
     {
-      "path": "oad_parser/platform_validation.py",
-      "sha256": "6c7a1e1df84c88543ce0761af626bb2ce421ed6695ec3dc5f5bed6a9bd935381",
-      "size_bytes": 5504
-    },
-    {
       "path": "oad_parser/protocols/__init__.py",
       "sha256": "f49d63442bef01fbbb1cddf152e040b341109dd4bf0d72e8f821e8474208de13",
       "size_bytes": 76
@@ -328,11 +314,6 @@
       "size_bytes": 1919
     },
     {
-      "path": "oad_parser/source_pack.py",
-      "sha256": "b27ca0206dcf32d9def60059bf2027a80c0fb17a308fd68eb12e80c75c89fd5b",
-      "size_bytes": 13717
-    },
-    {
       "path": "oad_parser/transformers/__init__.py",
       "sha256": "75718de1efdda889a70efe6d303697815bad7b6d0edff6bd9d329cb8171d8dd9",
       "size_bytes": 512
@@ -344,13 +325,24 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "6758ae3b24554003a4251a91be62497fa72d0ef0d0d1988abc9df342aad61d47",
+      "sha256": "1d10354cfe70f44425513a5ba6c047d843f65132e1643c15a6ff8a9dd5c60210",
       "size_bytes": 909
     },
     {
+      "path": "scripts/install_customer_runtime.py",
+      "sha256": "4cfe65417b54ac25c324069f82e8b6a66d6ff3f7ce4e44ecc2c94a529257e657",
+      "size_bytes": 4344
+    },
+    {
       "path": "scripts/make_customer_pack.sh",
-      "sha256": "5da55928075ccee6fa605596e0faeafc0385225298270ccf6d498525cec30ed9",
-      "size_bytes": 9047
+      "sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
+      "size_bytes": 11658
+    },
+    {
+      "generated": true,
+      "path": "oad_parser/_customer_runtime_profile.py",
+      "sha256": "94f55e2ad483c0cad83ceb7ec052d70407090d41dd1ca18927b31c3666ad7017",
+      "size_bytes": 100
     }
   ],
   "notes": [
@@ -372,5 +364,24 @@
     "python -m oad_parser --help",
     "python -m oad_parser live --help"
   ],
-  "schema_version": "customer-pack-manifest.v1"
+  "runtime_install_model": {
+    "import_model": "runtime package copied into service venv; no current-working-directory import dependency",
+    "installer": "scripts/install_customer_runtime.py",
+    "service_python": "/opt/oad-parser/venv/bin/python",
+    "systemd_exec_start": "/opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i"
+  },
+  "schema_version": "customer-pack-manifest.v2",
+  "source_provenance": {
+    "dirty_tree_status_at_generation": "clean",
+    "generated_at_utc": "2026-06-09T17:49:16Z",
+    "generated_by_python": "3.9.2",
+    "generator_script_path": "scripts/make_customer_pack.sh",
+    "generator_script_sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
+    "pack_format_version": "customer-runtime-operator-pack.v2",
+    "source_branch": "main",
+    "source_commit": "358bfc837b7fdeb63cd86e611798b1a624d9369e",
+    "source_remote_or_project": "rapid-capabilities-oad-parser",
+    "validation_report_path": null,
+    "validation_report_sha256": null
+  }
 }

@@ -16,7 +16,7 @@ Repository source path:
 
 The template runs:
 
-    /usr/bin/python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
 
 The `%i` token is the systemd instance name. For example, `ecg-parser@eno1.service` runs the live parser for interface `eno1`.
 
@@ -38,7 +38,20 @@ Expected live parser instances are interface-specific, for example:
 
 Only enable interfaces that are physically present and assigned to ECG UDP/IPv4 radar traffic.
 
-## Install
+## Runtime install
+
+From the extracted customer pack root, install the runtime package into the service environment:
+
+    sudo python3.9 scripts/install_customer_runtime.py --source . --prefix /opt/oad-parser --force
+
+This makes the service interpreter independent of the current working directory. Verify from another directory:
+
+    cd /
+    /opt/oad-parser/venv/bin/python -c "import oad_parser; print(oad_parser.__version__)"
+    /opt/oad-parser/venv/bin/python -m oad_parser --help
+    /opt/oad-parser/venv/bin/python -m oad_parser live --help
+
+## Install systemd unit
 
 Copy the template:
 
@@ -82,13 +95,33 @@ Disable at boot:
 
     sudo systemctl disable ecg-parser@eno1.service
 
+## Uninstall and rollback
+
+Stop and disable the interface instance:
+
+    sudo systemctl stop ecg-parser@eno1.service
+    sudo systemctl disable ecg-parser@eno1.service
+
+Remove the template unit and reload systemd:
+
+    sudo rm -f /etc/systemd/system/ecg-parser@.service
+    sudo systemctl daemon-reload
+
+Remove the installed runtime only after preserving any needed evidence:
+
+    sudo rm -rf /opt/oad-parser
+
+The `/nsm/ecg` directory contains runtime output evidence. Preserve or remove it only under site evidence-retention direction:
+
+    sudo ls -ld /nsm/ecg
+
 ## Production note about --max-frames
 
 Do not use `--max-frames` in the production systemd template.
 
 `--max-frames` is only for test and smoke runs such as:
 
-    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
 
 ## Restart behavior
 
@@ -125,7 +158,7 @@ After installation, use:
 
 For a non-production smoke run without systemd:
 
-    python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
 
 ## Sprint 2 target validation boundary
 
@@ -146,3 +179,11 @@ Systemd validation must confirm:
 Use `docs/release/target-environment-validation.md` for the target Oracle Linux Server 9.6 validation checklist.
 
 The checklist covers Python 3.9.2, root runtime, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection, `eno1` through `eno5` examples, `ecg-parser@enoX.service` start/status/stop checks, output file checks, storage behavior validation, and evidence that must not be committed.
+
+### Live MVP detection-scope note
+
+The `oad_parser live` service currently emits parser/transformer records and service health telemetry. Detection configuration flags such as `check_range`, `check_altitude`, `check_azimuth`, `check_site_discovery`, `check_time_delta`, and `check_fingerprint` are retained for parser-profile compatibility and offline/corpus workflows, but they are not an operational live-alerting authority in this pre-site release. Treat live `alert` and `alert_details` fields as legacy-compatible placeholders unless a later release explicitly wires and validates `DetectionEngine` behavior against approved evidence.
+
+### Live record metadata fields
+
+Live JSONL, audit, and status records include `parser_name`, `parser_version`, `record_schema_version`, and `package_profile`. These fields identify the parser release and live-record schema for operator troubleshooting and SIEM ingestion mapping. They do not certify target-site validation or authoritative OAD semantic decoding.

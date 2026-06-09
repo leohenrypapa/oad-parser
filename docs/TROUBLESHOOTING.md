@@ -1,143 +1,86 @@
-# OAD Parser Troubleshooting
+# Troubleshooting
 
-Use this guide when a first-run, validation, or handoff command fails.
+## Python cannot import oad_parser
 
-## First command to run
+The customer runtime must be installed before service use:
 
-From the repository root or extracted source-pack root:
+    sudo python3.9 scripts/install_customer_runtime.py --source . --prefix /opt/oad-parser --force
 
-    ./scripts/quickstart_check.sh
+Then verify from outside the extracted pack root:
 
-For a deeper check that also runs unit tests:
+    cd /
+    /opt/oad-parser/venv/bin/python -c "import oad_parser; print(oad_parser.__version__)"
 
-    ./scripts/quickstart_check.sh --with-tests
+If this fails, reinstall the runtime pack and confirm Python is at least 3.9.2.
 
-The quickstart script does not require `.git` metadata and does not use private pcaps.
+## Customer help shows unexpected development commands
 
-## Wrong Python version
+Run:
 
-Symptom:
+    /opt/oad-parser/venv/bin/python -m oad_parser --help
 
-    ERROR: Python 3.9.2 is required
+The customer pack should show only operator commands. If development-only commands appear, stop and request a regenerated customer pack.
 
-Fix:
+## Legacy ecg.service stack trace
 
-    python3.9 --version
-    python3.9 -m oad_parser validate-platform
+A stack trace that shows this command is from the legacy target-host service, not from the packaged OAD Parser runtime:
 
-The release-validation runtime is Python 3.9.2 exactly. In the customer Python 3.9.2 environment, use the approved Python 3.9.2 interpreter explicitly.
+    /usr/bin/python3 /usr/bin/ecg.py eno4
 
-## Not in the repository root
+Common legacy trace locations include `receive_net_frames` and `process_frame` inside `/usr/bin/ecg.py`. Treat that as a site service conflict until proven otherwise. Confirm the active service command:
 
-Symptom:
+    systemctl cat ecg.service --no-pager || true
+    systemctl cat ecg-parser@eno4.service --no-pager || true
 
-    No module named oad_parser
+The expected OAD Parser command is:
 
-Fix:
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno4
 
-    cd PATH_TO_EXTRACTED_OR_CLONED_OAD_PARSER
-    python3.9 -m oad_parser --help
+If site authority approves replacement on interface `eno4`, stop the legacy service before starting the OAD Parser template instance:
 
-You can also run the quickstart script from anywhere by using its full path.
+    sudo systemctl stop ecg.service || true
+    sudo systemctl disable ecg.service || true
+    sudo systemctl start ecg-parser@eno4.service
+    sudo systemctl status ecg-parser@eno4.service --no-pager
 
-## Extracted source pack has no .git directory
+## Systemd service does not start
 
-Symptom:
+Check the installed service command:
 
-    ERROR: this validation requires a Git checkout with .git metadata
+    systemctl cat ecg-parser@eno1.service
 
-Cause:
+Expected interpreter:
 
-Release-readiness scripts are Git-checkout gates. Extracted source packs intentionally exclude `.git` metadata.
+    /opt/oad-parser/venv/bin/python
 
-Use these extraction-safe commands instead:
+Check logs:
 
-    ./scripts/quickstart_check.sh
-    python3.9 -m unittest discover -s oad_parser/tests -p "test_*.py"
-    python3.9 -m oad_parser validate-platform
+    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
 
-## Missing or invalid input path
+## Configuration missing or invalid
 
-Symptom:
+Confirm the site config exists:
 
-    No such file or directory
+    test -f /etc/oad-parser/ecg_conf.ini
 
-Fix:
+Confirm the selected interface is configured and physically connected to approved ECG traffic.
 
-- Confirm the file exists.
-- Use only approved local or sanitized pcaps.
-- Do not place private pcaps, raw payloads, JSONL outputs, or local validation reports in the source pack.
+## Output files missing
 
-## No pcap is available
+Confirm /nsm/ecg exists and is writable by the service runtime:
 
-You can still validate the platform with synthetic non-sensitive samples:
+    ls -ld /nsm/ecg
 
-    python3.9 -m oad_parser validate-platform
-    python3.9 -m oad_parser generate-fixture-samples --output-dir /tmp/oad-parser-samples
+Expected files after live operation:
 
-Synthetic samples prove parser regression and self-consistency only. They do not prove operational radar semantic correctness.
+- /nsm/ecg/ecg-current.json
+- /nsm/ecg/ecg-audit.jsonl
+- /nsm/ecg/ecg-status.json
 
-## Malformed input or unexpected parser output
+## Bounded live smoke check
 
-Use the smallest safe command first:
+A non-production smoke check can run with max frames set to zero:
 
-    python3.9 -m oad_parser inspect-pcap PATH_TO_APPROVED_FILE.pcap
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
 
-If the input is a raw ECG payload, use:
-
-    python3.9 -m oad_parser extract-ecg-messages PATH_TO_RAW_PAYLOAD --raw-payload --jsonl
-
-Do not share command output externally until it has been reviewed for local paths, addresses, ports, or other sensitive details.
-
-## validate-corpus returns nonzero
-
-`validate-corpus` returns nonzero when parser errors, mismatches, or zero-comparison files are present.
-
-A zero-comparison file means the file was scanned but did not produce parser comparisons. Treat it as a validation failure until the input format and parser selection are confirmed.
-
-Next steps:
-
-    python3.9 -m oad_parser summarize-corpus-report corpus-report.json
-
-Then ask a maintainer to review the mismatches, parser errors, or zero-comparison files.
-
-## Beacon-candidate output looks wrong or incomplete
-
-The `beacon-candidate` decoder is provisional and non-authoritative. Do not treat it as operational radar truth without approved sanitized captures or authoritative message-format references.
-
-## When to contact a maintainer
-
-Contact a maintainer if:
-
-- `validate-platform` does not show `Passed: true`.
-- A command prints a Python traceback.
-- Corpus validation shows mismatches or zero-comparison files.
-- You need to interpret `beacon-candidate` fields.
-- You need to share pcap-derived output externally.
-- You are unsure whether data is sanitized.
-
-## Live parser troubleshooting alignment
-
-For Sprint 2 live parser troubleshooting, distinguish parser-owned outputs from SIEM-owned collection:
-
-- Parser active output: `/nsm/ecg/ecg-current.json`
-  - JSON Lines content despite the `.json` suffix.
-- Parser audit output: `/nsm/ecg/ecg-audit.jsonl`
-- Parser local status: `/nsm/ecg/ecg-status.json`
-- Config file: `/etc/oad-parser/ecg_conf.ini`
-- Systemd template: `deploy/systemd/ecg-parser@.service`
-- Instance example: `ecg-parser@eno1.service`
-
-If `ecg-parser@enoX.service` fails on target, check:
-
-- The selected `enoX` interface exists and is a connected ECG interface.
-- The service is running as root or with the required raw-socket capability.
-- `/nsm/ecg` exists and has expected ownership/permissions.
-- `/etc/oad-parser/ecg_conf.ini` points to the intended output paths.
-- Filebeat/Elastic Agent handoff configuration is handled by the SIEM owner and does not belong in this repo.
-
-## Target validation troubleshooting reference
-
-For Oracle Linux Server 9.6 target checks, use `docs/release/target-environment-validation.md`.
-
-Do not commit target logs with site-sensitive details, real PCAPs, raw operational payloads, `/nsm/ecg` runtime outputs, hostnames, IP addresses, SIEM endpoints, tokens, certificates, private keys, index names, customer-specific interface mappings, or unsanitized systemd journal exports.
+Do not add --max-frames to the production systemd template.

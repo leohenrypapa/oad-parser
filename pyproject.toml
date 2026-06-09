@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "oad-parser"
-version = "0.1.0"
+version = "0.3.0"
 description = "OAD parser platform for ECG/CD2 packet replay, parsing, detection, and JSONL output."
 authors = ["OAD Team"]
 readme = "README.md"

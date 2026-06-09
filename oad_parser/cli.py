@@ -8,6 +8,7 @@ arguments, config resolution, and user-friendly command execution.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 from dataclasses import replace
 import json
 import re
@@ -16,13 +17,9 @@ from pathlib import Path
 
 from oad_parser import __version__
 from oad_parser.compare import compare_legacy_records_to_envelopes, comparison_summary
-from oad_parser.corpus import validate_corpus_path
-from oad_parser.corpus_report import load_corpus_report, summarize_corpus_report
 from oad_parser.config import LiveParserConfig, ParserConfig, load_live_parser_config, load_parser_config
 from oad_parser.decoders.cd2_radar import decode_beacon_candidate_words, decode_raw12_words
 from oad_parser.decoders.registry import build_default_registry
-from oad_parser.fixture_samples import generate_fixture_samples
-from oad_parser.golden import check_golden_fixture, write_golden_fixture
 from oad_parser.errors import OadParserError
 from oad_parser.detectors import DetectionConfig, DetectionEngine
 from oad_parser.ingest.live_socket import iter_live_capture_frames_from_config, iter_live_frames
@@ -41,9 +38,152 @@ from oad_parser.parsers.cd2 import (
     normalize_13_bit_word,
 )
 from oad_parser.parsers.ecg import extract_ecg_messages, parse_frame
-from oad_parser.platform_validation import format_platform_validation_report, validate_platform
 from oad_parser.runtime import write_frame_stream_jsonl
-from oad_parser.source_pack import create_source_pack
+
+
+CUSTOMER_RUNTIME_MARKER = "oad_parser._customer_runtime_profile"
+
+DEVELOPMENT_COMMANDS = {
+    "validate-corpus",
+    "summarize-corpus-report",
+    "export-golden-fixture",
+    "check-golden-fixture",
+    "generate-fixture-samples",
+    "validate-platform",
+    "create-source-pack",
+}
+
+
+def customer_runtime_profile_enabled() -> bool:
+    """Return True when running from the customer runtime/operator pack."""
+
+    if importlib.util.find_spec(CUSTOMER_RUNTIME_MARKER) is not None:
+        return True
+
+    import sys
+
+    for entry in sys.path:
+        if not entry:
+            continue
+        if (Path(entry) / "oad_parser" / "_customer_runtime_profile.py").is_file():
+            return True
+    return False
+
+
+def add_development_parsers(subparsers: argparse._SubParsersAction) -> None:
+    validate_corpus = subparsers.add_parser(
+        "validate-corpus",
+        help="Validate a corpus of pcap and raw ECG payload files against legacy/envelope comparison.",
+    )
+    validate_corpus.add_argument("path", help="Corpus directory or single file.")
+    validate_corpus.add_argument(
+        "--raw-payload",
+        action="store_true",
+        help="Treat input file(s) as raw ECG payload bytes.",
+    )
+    validate_corpus.add_argument("--output", default=None, help="Optional output path for report JSON.")
+
+    summarize_corpus = subparsers.add_parser(
+        "summarize-corpus-report",
+        help="Print a compact human-readable summary of a validate-corpus JSON report.",
+    )
+    summarize_corpus.add_argument("input", help="Input corpus report JSON path.")
+    summarize_corpus.add_argument(
+        "--show-matches",
+        action="store_true",
+        help="Include matched files in the summary.",
+    )
+    summarize_corpus.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Maximum number of files to show per section.",
+    )
+    summarize_corpus.add_argument("--output", default=None, help="Optional output path for text summary.")
+
+    export_golden = subparsers.add_parser(
+        "export-golden-fixture",
+        help="Export a golden fixture from a pcap or raw ECG payload.",
+    )
+    export_golden.add_argument("input", help="Input pcap path, or raw ECG payload path with --raw-payload.")
+    export_golden.add_argument("--output", required=True, help="Golden fixture JSON output path.")
+    export_golden.add_argument(
+        "--raw-payload",
+        action="store_true",
+        help="Treat input as raw ECG payload bytes instead of a pcap.",
+    )
+
+    check_golden = subparsers.add_parser(
+        "check-golden-fixture",
+        help="Check current parser output against a golden fixture.",
+    )
+    check_golden.add_argument("fixture", help="Golden fixture JSON path.")
+    check_golden.add_argument(
+        "--input",
+        default=None,
+        help="Optional input sample override. Defaults to the fixture source path.",
+    )
+
+    generate_fixtures = subparsers.add_parser(
+        "generate-fixture-samples",
+        help="Generate deterministic non-sensitive parser fixture samples.",
+    )
+    generate_fixtures.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory where synthetic fixture samples will be written.",
+    )
+    generate_fixtures.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit generated file manifest as JSON.",
+    )
+
+    validate_platform_parser = subparsers.add_parser(
+        "validate-platform",
+        help="Run a local end-to-end parser platform health check.",
+    )
+    validate_platform_parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Optional directory to keep generated validation artifacts.",
+    )
+    validate_platform_parser.add_argument(
+        "--run-tests",
+        action="store_true",
+        help="Run unittest discovery as part of the platform validation.",
+    )
+    validate_platform_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit validation report as JSON.",
+    )
+
+    source_pack = subparsers.add_parser(
+        "create-source-pack",
+        help="Create a safe source-pack tar.gz for AI/developer handoff.",
+    )
+    source_pack.add_argument(
+        "--output",
+        required=True,
+        help="Output .tar.gz path.",
+    )
+    source_pack.add_argument(
+        "--tracked-only",
+        action="store_true",
+        help="Use tracked-only source-pack mode. This is the default for release safety.",
+    )
+    source_pack.add_argument(
+        "--include-untracked",
+        action="store_true",
+        help="Include untracked files. Internal use only; do not use for customer release packs.",
+    )
+    source_pack.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit source-pack result as JSON.",
+    )
+
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -162,118 +302,8 @@ def build_parser() -> argparse.ArgumentParser:
     compare_legacy.add_argument("--jsonl", action="store_true", help="Emit one JSON object per line.")
     compare_legacy.add_argument("--output", default=None, help="Optional output path for JSON or JSONL.")
 
-    validate_corpus = subparsers.add_parser(
-        "validate-corpus",
-        help="Validate a corpus of pcap and raw ECG payload files against legacy/envelope comparison.",
-    )
-    validate_corpus.add_argument("path", help="Corpus directory or single file.")
-    validate_corpus.add_argument(
-        "--raw-payload",
-        action="store_true",
-        help="Treat input file(s) as raw ECG payload bytes.",
-    )
-    validate_corpus.add_argument("--output", default=None, help="Optional output path for report JSON.")
-
-    summarize_corpus = subparsers.add_parser(
-        "summarize-corpus-report",
-        help="Print a compact human-readable summary of a validate-corpus JSON report.",
-    )
-    summarize_corpus.add_argument("input", help="Input corpus report JSON path.")
-    summarize_corpus.add_argument(
-        "--show-matches",
-        action="store_true",
-        help="Include matched files in the summary.",
-    )
-    summarize_corpus.add_argument(
-        "--limit",
-        type=int,
-        default=20,
-        help="Maximum number of files to show per section.",
-    )
-    summarize_corpus.add_argument("--output", default=None, help="Optional output path for text summary.")
-
-    export_golden = subparsers.add_parser(
-        "export-golden-fixture",
-        help="Export a golden fixture from a pcap or raw ECG payload.",
-    )
-    export_golden.add_argument("input", help="Input pcap path, or raw ECG payload path with --raw-payload.")
-    export_golden.add_argument("--output", required=True, help="Golden fixture JSON output path.")
-    export_golden.add_argument(
-        "--raw-payload",
-        action="store_true",
-        help="Treat input as raw ECG payload bytes instead of a pcap.",
-    )
-
-    check_golden = subparsers.add_parser(
-        "check-golden-fixture",
-        help="Check current parser output against a golden fixture.",
-    )
-    check_golden.add_argument("fixture", help="Golden fixture JSON path.")
-    check_golden.add_argument(
-        "--input",
-        default=None,
-        help="Optional input sample override. Defaults to the fixture source path.",
-    )
-
-    generate_fixtures = subparsers.add_parser(
-        "generate-fixture-samples",
-        help="Generate deterministic non-sensitive parser fixture samples.",
-    )
-    generate_fixtures.add_argument(
-        "--output-dir",
-        required=True,
-        help="Directory where synthetic fixture samples will be written.",
-    )
-    generate_fixtures.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit generated file manifest as JSON.",
-    )
-
-    validate_platform_parser = subparsers.add_parser(
-        "validate-platform",
-        help="Run a local end-to-end parser platform health check.",
-    )
-    validate_platform_parser.add_argument(
-        "--output-dir",
-        default=None,
-        help="Optional directory to keep generated validation artifacts.",
-    )
-    validate_platform_parser.add_argument(
-        "--run-tests",
-        action="store_true",
-        help="Run unittest discovery as part of the platform validation.",
-    )
-    validate_platform_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit validation report as JSON.",
-    )
-
-    source_pack = subparsers.add_parser(
-        "create-source-pack",
-        help="Create a safe source-pack tar.gz for AI/developer handoff.",
-    )
-    source_pack.add_argument(
-        "--output",
-        required=True,
-        help="Output .tar.gz path.",
-    )
-    source_pack.add_argument(
-        "--tracked-only",
-        action="store_true",
-        help="Use tracked-only source-pack mode. This is the default for release safety.",
-    )
-    source_pack.add_argument(
-        "--include-untracked",
-        action="store_true",
-        help="Include untracked files. Internal use only; do not use for customer release packs.",
-    )
-    source_pack.add_argument(
-        "--json",
-        action="store_true",
-        help="Emit source-pack result as JSON.",
-    )
+    if not customer_runtime_profile_enabled():
+        add_development_parsers(subparsers)
 
     validate = subparsers.add_parser("validate", help="Validate JSONL output.")
     validate.add_argument("input", help="Input JSONL path.")
@@ -706,6 +736,8 @@ def run_compare_legacy_envelope(args: argparse.Namespace) -> int:
 
 
 def run_validate_corpus(args: argparse.Namespace) -> int:
+    from oad_parser.corpus import validate_corpus_path
+
     report = validate_corpus_path(args.path, force_raw_payload=args.raw_payload)
     rendered = json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n"
     output_path = getattr(args, "output", None)
@@ -724,6 +756,8 @@ def run_validate_corpus(args: argparse.Namespace) -> int:
 
 
 def run_summarize_corpus_report(args: argparse.Namespace) -> int:
+    from oad_parser.corpus_report import load_corpus_report, summarize_corpus_report
+
     report = load_corpus_report(args.input)
     rendered = summarize_corpus_report(
         report,
@@ -740,6 +774,8 @@ def run_summarize_corpus_report(args: argparse.Namespace) -> int:
 
 
 def run_export_golden_fixture(args: argparse.Namespace) -> int:
+    from oad_parser.golden import write_golden_fixture
+
     fixture = write_golden_fixture(
         args.input,
         args.output,
@@ -755,12 +791,16 @@ def run_export_golden_fixture(args: argparse.Namespace) -> int:
 
 
 def run_check_golden_fixture(args: argparse.Namespace) -> int:
+    from oad_parser.golden import check_golden_fixture
+
     result = check_golden_fixture(args.fixture, input_override=args.input)
     print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
     return 0 if result.match else 1
 
 
 def run_generate_fixture_samples(args: argparse.Namespace) -> int:
+    from oad_parser.fixture_samples import generate_fixture_samples
+
     result = generate_fixture_samples(args.output_dir)
     if args.json:
         print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
@@ -772,6 +812,8 @@ def run_generate_fixture_samples(args: argparse.Namespace) -> int:
 
 
 def run_validate_platform(args: argparse.Namespace) -> int:
+    from oad_parser.platform_validation import format_platform_validation_report, validate_platform
+
     report = validate_platform(
         output_dir=args.output_dir,
         run_tests=args.run_tests,
@@ -784,6 +826,8 @@ def run_validate_platform(args: argparse.Namespace) -> int:
 
 
 def run_create_source_pack(args: argparse.Namespace) -> int:
+    from oad_parser.source_pack import create_source_pack
+
     include_untracked = bool(
         getattr(args, "include_untracked", False)
         and not getattr(args, "tracked_only", False)

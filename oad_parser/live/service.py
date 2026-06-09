@@ -88,6 +88,8 @@ def run_live_service(
         {"max_frames": max_frames},
         last_error,
     )
+    last_status_emit_at = resolved_now_fn()
+    last_metrics_emit_at = resolved_now_fn()
 
     frame_iter = iter(capture_frames)
     while True:
@@ -150,6 +152,28 @@ def run_live_service(
                 last_error = "record sink failed: %s" % exc
 
         frames_processed += 1
+
+        last_status_emit_at, last_error = _emit_periodic_status(
+            status_sink=status_sink,
+            config=config,
+            metrics=resolved_metrics,
+            now_fn=resolved_now_fn,
+            last_error=last_error,
+            last_status_emit_at=last_status_emit_at,
+            storage_result=last_storage_result,
+        )
+        last_metrics_emit_at, last_error = _emit_periodic_metrics(
+            audit_sink=audit_sink,
+            config=config,
+            metrics=resolved_metrics,
+            now_fn=resolved_now_fn,
+            last_error=last_error,
+            last_metrics_emit_at=last_metrics_emit_at,
+            frames_processed=frames_processed,
+            records_emitted=records_emitted,
+            writer_blocked=writer_blocked,
+            storage_critical=storage_critical,
+        )
 
     _update_writer_block_timer(
         metrics=resolved_metrics,
@@ -258,6 +282,67 @@ def _apply_storage_policy(
         last_error=last_error,
     )
 
+
+
+def _emit_periodic_status(
+    *,
+    status_sink: Optional[StatusSink],
+    config: LiveParserConfig,
+    metrics: LiveMetrics,
+    now_fn: NowFn,
+    last_error: Optional[str],
+    last_status_emit_at: datetime,
+    storage_result: Optional[StorageProtectionResult],
+) -> tuple[datetime, Optional[str]]:
+    now = now_fn()
+    elapsed_seconds = (now - last_status_emit_at).total_seconds()
+    if elapsed_seconds < config.status_interval_seconds:
+        return last_status_emit_at, last_error
+
+    last_error = _emit_status(
+        status_sink,
+        config,
+        metrics,
+        lambda: now,
+        last_error,
+        storage_result=storage_result,
+    )
+    return now, last_error
+
+
+def _emit_periodic_metrics(
+    *,
+    audit_sink: Optional[AuditSink],
+    config: LiveParserConfig,
+    metrics: LiveMetrics,
+    now_fn: NowFn,
+    last_error: Optional[str],
+    last_metrics_emit_at: datetime,
+    frames_processed: int,
+    records_emitted: int,
+    writer_blocked: bool,
+    storage_critical: bool,
+) -> tuple[datetime, Optional[str]]:
+    now = now_fn()
+    elapsed_seconds = (now - last_metrics_emit_at).total_seconds()
+    if elapsed_seconds < config.metrics_interval_seconds:
+        return last_metrics_emit_at, last_error
+
+    last_error = _emit_audit(
+        audit_sink,
+        config,
+        lambda: now,
+        "live_service_metrics",
+        {
+            "frames_processed": frames_processed,
+            "records_emitted": records_emitted,
+            "writer_blocked": writer_blocked,
+            "storage_critical": storage_critical,
+            "counters": metrics.snapshot(),
+        },
+        last_error,
+    )
+    return now, last_error
 
 def _update_metrics_from_write_result(metrics: LiveMetrics, write_result: object) -> None:
     if write_result is None:

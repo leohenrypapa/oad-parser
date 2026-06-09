@@ -11,7 +11,7 @@ Type=simple
 User=root
 Group=root
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3.9 -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
+ExecStart=/opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
 Restart=on-failure
 RestartSec=10s
 TimeoutStopSec=30s

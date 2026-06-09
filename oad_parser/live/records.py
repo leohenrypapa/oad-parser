@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from oad_parser import __version__ as OAD_PARSER_VERSION
 from oad_parser.config import (
     DEFAULT_LIVE_AUDIT_FILE,
     DEFAULT_LIVE_DISK_CRITICAL_PERCENT,
@@ -18,6 +19,22 @@ from oad_parser.config import (
     DEFAULT_LIVE_ROTATE_SECONDS,
     DEFAULT_LIVE_STATUS_FILE,
 )
+
+
+LIVE_PARSER_NAME = "oad-parser"
+LIVE_RECORD_SCHEMA_VERSION = "live-legacy-v1"
+LIVE_PACKAGE_PROFILE = "customer-runtime-operator"
+
+
+def live_record_metadata() -> Dict[str, str]:
+    """Return common release/schema metadata for live-path records."""
+
+    return {
+        "parser_name": LIVE_PARSER_NAME,
+        "parser_version": OAD_PARSER_VERSION,
+        "record_schema_version": LIVE_RECORD_SCHEMA_VERSION,
+        "package_profile": LIVE_PACKAGE_PROFILE,
+    }
 
 
 def format_utc_timestamp(value: Optional[datetime] = None) -> str:
@@ -75,6 +92,7 @@ class EcgOutputRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         record = dict(self.fields)
+        record.update(live_record_metadata())
         record["@timestamp"] = format_utc_timestamp(self.timestamp_utc)
         record["record_type"] = self.record_type
         record["interface"] = self.interface
@@ -96,6 +114,7 @@ class EcgParseErrorRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         record = dict(self.packet_metadata)
+        record.update(live_record_metadata())
         record.update(
             {
                 "@timestamp": format_utc_timestamp(self.timestamp_utc),
@@ -122,6 +141,7 @@ class EcgAuditRecord:
 
     def to_dict(self) -> Dict[str, Any]:
         record = dict(self.fields)
+        record.update(live_record_metadata())
         record.update(
             {
                 "@timestamp": format_utc_timestamp(self.timestamp_utc),
@@ -147,17 +167,21 @@ class EcgStatusSnapshot:
     last_error: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "@timestamp": format_utc_timestamp(self.timestamp_utc),
-            "record_type": "ecg_status",
-            "interface": self.interface,
-            "counters": dict(self.counters),
-            "active_file": self.active_file,
-            "disk_percent": self.disk_percent,
-            "last_rotation": self.last_rotation,
-            "last_prune": self.last_prune,
-            "last_error": self.last_error,
-        }
+        record = live_record_metadata()
+        record.update(
+            {
+                "@timestamp": format_utc_timestamp(self.timestamp_utc),
+                "record_type": "ecg_status",
+                "interface": self.interface,
+                "counters": dict(self.counters),
+                "active_file": self.active_file,
+                "disk_percent": self.disk_percent,
+                "last_rotation": self.last_rotation,
+                "last_prune": self.last_prune,
+                "last_error": self.last_error,
+            }
+        )
+        return record
 
 
 @dataclass

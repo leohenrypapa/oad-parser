@@ -1,4 +1,22 @@
+## 2026-06-06
+- Fixed CI runtime validation so `PYTHON_BIN=python3` resolves from `PATH` and CI may accept Python `3.9.x` patch drift when explicitly enabled.
+
 # Changelog
+
+## 0.3.0 - Pre-site readiness hardening
+
+- Synchronized package/documentation version references to 0.3.0.
+- Hardened customer-pack generation and validation for non-root invocation, non-Git extracted trees, archive path normalization, duplicate paths, symlinks, hardlinks, absolute paths, drive-qualified paths, and parent traversal.
+- Added live-service periodic status/metrics emission.
+- Documented Live MVP detection-scope limits and preserved inactive legacy detection placeholders as `None`.
+- Replaced synthetic JUnit evidence with per-testcase JUnit XML generation.
+- Added live record release/schema metadata fields: `parser_name`, `parser_version`, `record_schema_version`, and `package_profile`.
+- Added regression coverage for customer-pack generation paths.
+- Added `scripts/validate_pre_site_readiness.sh` for repeatable local pre-site evidence generation.
+- Confirmed local validation on Python 3.9.2 with full unit tests, JUnit XML generation, platform validation, customer-pack generation, and customer-pack validation.
+
+Note: this release evidence is local/pre-site only. It does not replace target-site Oracle Linux Server 9.6, root/systemd, NIC, `/nsm/ecg`, storage pressure, or SIEM validation.
+
 
 ## Sprint 3 Documentation Alignment - Issue #39
 
