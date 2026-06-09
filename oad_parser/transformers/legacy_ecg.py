@@ -5,6 +5,20 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List
 
+from oad_parser.decoders.provisional_beacon_constants import (
+    ACP_DEGREES_PER_COUNT,
+    ACP_WORD_INDEX,
+    ALTITUDE_FEET_PER_COUNT,
+    ALTITUDE_SIGN_MASK,
+    LEGACY_ALTITUDE_WORD_MASK,
+    LEGACY_RANGE_NM_SCALE,
+    LEGACY_RANGE_WORD_MASK,
+    LEGACY_RANGE_WORD_SHIFT,
+    MODE_3_WORD_INDEX,
+    RANGE_WORD_INDEX,
+    WORD_DATA_MASK,
+)
+
 from oad_parser.decoders.cd2_radar import decode_beacon_candidate_words
 from oad_parser.live.records import EcgOutputRecord, EcgParseErrorRecord, sha256_hex
 from oad_parser.parsers.ecg import (
@@ -36,6 +50,9 @@ UNKNOWN_CATEGORICAL_FIELDS = {
     "site_id",
     "message_type",
 }
+
+PROJECTABLE_RADAR_MESSAGES = {"cd-2", "cd-asr", "mar"}
+PROJECTABLE_RADAR_MESSAGE_TYPES = {"beacon", "search"}
 
 
 def transform_parse_result_to_legacy_records(
@@ -125,9 +142,9 @@ def legacy_fields_for_envelope(
 ) -> Dict[str, Any]:
     """Return legacy-compatible fields for a valid ECG envelope.
 
-    The transformer projects the same provisional beacon/search fields used by
-    the parser and decoder paths so live output does not suppress Sensor5 plot
-    fields after the ECG envelope has been parsed.
+    Live mode receives ECG envelopes, not ParsedPlot objects. Keep the legacy
+    JSON schema, but project provisional radar fields directly from envelope
+    data words for CD-2/CD-ASR/MAR beacon/search messages.
     """
 
     fields: Dict[str, Any] = {
@@ -146,7 +163,7 @@ def legacy_fields_for_envelope(
         "sha256_ecg_payload": sha256_hex(ecg_payload),
     }
 
-    fields.update(_project_plot_fields(envelope))
+    fields.update(_project_legacy_radar_fields(envelope))
 
     if parse_warnings:
         fields["parse_warnings"] = _parse_warning_dicts(parse_warnings)
@@ -154,24 +171,44 @@ def legacy_fields_for_envelope(
     return fields
 
 
-
-def _project_plot_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:
+def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:
     fields: Dict[str, Any] = {name: None for name in LEGACY_NULL_FIELDS}
-
-    if envelope.message_type in {"beacon", "search"}:
-        decoded = decode_beacon_candidate_words(
-            envelope.data_words,
-            input_basis="ecg_envelope_16bit_words",
-        )
-        for name in ("range_nm", "azimuth_degrees", "altitude_feet", "mode_3_code", "acp"):
-            fields[name] = decoded.get(name)
-        return fields
 
     if envelope.message_type == "rtqc":
         fields["alert"] = "RTQC"
         fields["alert_details"] = "RTQC message detected."
 
+    if envelope.message_name not in PROJECTABLE_RADAR_MESSAGES:
+        return fields
+
+    if envelope.message_type not in PROJECTABLE_RADAR_MESSAGE_TYPES:
+        return fields
+
+    words = list(envelope.data_words)
+
+    if len(words) > RANGE_WORD_INDEX:
+        fields["range_nm"] = (
+            int((words[RANGE_WORD_INDEX] & LEGACY_RANGE_WORD_MASK) >> LEGACY_RANGE_WORD_SHIFT)
+            * LEGACY_RANGE_NM_SCALE
+        )
+
+    if len(words) > ACP_WORD_INDEX:
+        acp = int(words[ACP_WORD_INDEX] & WORD_DATA_MASK)
+        fields["acp"] = acp
+        fields["azimuth_degrees"] = acp * ACP_DEGREES_PER_COUNT
+
+    if len(words) > MODE_3_WORD_INDEX and envelope.message_type == "beacon":
+        fields["mode_3_code"] = int(oct(int(words[MODE_3_WORD_INDEX] & WORD_DATA_MASK))[2:])
+
+    if envelope.message_type == "beacon" and envelope.modec_valid and len(words) > 6:
+        altitude_word = int(words[6] & LEGACY_ALTITUDE_WORD_MASK)
+        altitude_feet = altitude_word * ALTITUDE_FEET_PER_COUNT
+        if words[6] & ALTITUDE_SIGN_MASK:
+            altitude_feet *= -1
+        fields["altitude_feet"] = altitude_feet
+
     return fields
+
 
 
 def _parse_warning_dicts(

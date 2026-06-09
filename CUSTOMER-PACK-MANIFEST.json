@@ -51,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-09T21:22:56Z",
+  "generated_at_utc": "2026-06-09T21:54:21Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -320,8 +320,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "bf02beda475170bc3dcf234504e8ef943527bb6fec275585f9a606b696f4b1b7",
-      "size_bytes": 6888
+      "sha256": "5abfc2606d2cfd1e0cd59c54d8c50d9fa1b245334052cbaafbc89378a3968b71",
+      "size_bytes": 8134
     },
     {
       "path": "pyproject.toml",
@@ -373,13 +373,13 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "clean",
-    "generated_at_utc": "2026-06-09T21:22:56Z",
+    "generated_at_utc": "2026-06-09T21:54:21Z",
     "generated_by_python": "3.9.2",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
     "pack_format_version": "customer-runtime-operator-pack.v2",
     "source_branch": "main",
-    "source_commit": "2921953b77334aff3a3c90cbf140edf8187ccdf0",
+    "source_commit": "e4333966af5fbc35a8424d1ced239d342a62739c",
     "source_remote_or_project": "rapid-capabilities-oad-parser",
     "validation_report_path": null,
     "validation_report_sha256": null

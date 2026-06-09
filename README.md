@@ -5,24 +5,31 @@ This repository mirrors the current OAD Parser customer runtime and publishes th
 ## Latest customer pack
 
 Release tag:
-customer-pack-20260609T212256Z-2921953b7733
+customer-pack-20260609T215421Z-e4333966af5f
 
 Asset:
-oad-parser-customer-runtime-20260609T212256Z-2921953b7733.tar.gz
+oad-parser-customer-runtime-20260609T215421Z-e4333966af5f.tar.gz
 
 SHA256:
-aff21881b539b23abc02ff6ae3997e53a8de1708833aace945ac9621eef5662f
+4914901ad620956eb1e84d22ad72c1ed6aca8d12be6248fb1735f0898c77cdee
 
-## Sensor5 parser fix marker
+Source commit:
+e4333966af5fbc35a8424d1ced239d342a62739c
 
-The current runtime includes the Sensor5 parser fix in:
+## Sensor5 live transformer fix marker
 
-oad_parser/parsers/ecg.py
+The current runtime includes live field projection in:
+
+oad_parser/transformers/legacy_ecg.py
 
 Expected markers:
-- record.extra["classification_flags"] = ["rtqc_bit_set"]
-- record.fingerprint = sha256(
+- PROJECTABLE_RADAR_MESSAGES = {"cd-2", "cd-asr", "mar"}
+- def _project_legacy_radar_fields
+- fields["range_nm"]
+- fields["azimuth_degrees"]
+- fields["mode_3_code"]
+- fields["altitude_feet"]
 
 ## Acceptance boundary
 
-Publication does not claim target-site acceptance. Confirm Sensor5 pcap or live-stream smoke separately before operational closure.
+Publication does not claim target-site acceptance. Confirm Sensor5 live output separately before operational closure.
