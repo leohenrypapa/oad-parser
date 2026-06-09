@@ -1,0 +1,12 @@
+{
+  "project": "rapid-capabilities-oad-parser",
+  "source_remote": "https://code.levelup.cce.af.mil/cpb/csd-d/rapid-capabilities-oad-parser.git",
+  "source_branch": "main",
+  "source_commit": "2921953b77334aff3a3c90cbf140edf8187ccdf0",
+  "source_commit_short": "2921953b7733",
+  "published_utc": "20260609T211038Z",
+  "customer_pack": "oad-parser-customer-runtime-20260609T211038Z-2921953b7733.tar.gz",
+  "published_to": "git@github.com:leohenrypapa/oad-parser.git",
+  "target_acceptance_claimed": false,
+  "note": "Customer pack generated after Sensor5 parser fix. Target-site pcap or live-stream smoke remains a separate acceptance gate."
+}
