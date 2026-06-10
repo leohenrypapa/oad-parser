@@ -19,12 +19,15 @@ DEFAULT_CD2_RECEIVE_FRAME_SIZE_WORDS = 32
 DEFAULT_LIVE_OUTPUT_JSON_FILE = "/nsm/ecg/ecg-current.json"
 DEFAULT_LIVE_OUTPUT_CSV_FILE = "/nsm/ecg/ecg.csv"
 DEFAULT_LIVE_OUTPUT_DIR = "/nsm/ecg"
-DEFAULT_LIVE_AUDIT_FILE = "/nsm/ecg/ecg-audit.jsonl"
-DEFAULT_LIVE_STATUS_FILE = "/nsm/ecg/ecg-status.json"
+DEFAULT_LIVE_AUDIT_FILE = "/var/log/oad-parser/ecg-audit.jsonl"
+DEFAULT_LIVE_STATUS_FILE = "/run/oad-parser/ecg-status.json"
 DEFAULT_LIVE_INTERFACE = "eno1"
 DEFAULT_LIVE_MODE = "legacy_jsonl"
 DEFAULT_LIVE_ROTATE_SECONDS = 900
 DEFAULT_LIVE_ROTATE_MAX_BYTES = 536870912
+DEFAULT_LIVE_ROTATION_ENABLED = False
+DEFAULT_LIVE_OUTPUT_STATUS = False
+DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE = False
 DEFAULT_LIVE_RECEIVE_BUFFER_BYTES = 134217728
 DEFAULT_LIVE_STATUS_INTERVAL_SECONDS = 60
 DEFAULT_LIVE_METRICS_INTERVAL_SECONDS = 60
@@ -70,10 +73,11 @@ class LiveParserConfig:
     check_site_discovery: bool = True
     check_time_delta: bool = True
     check_fingerprint: bool = True
-    output_status: bool = True
+    output_status: bool = DEFAULT_LIVE_OUTPUT_STATUS
 
     interface: str = DEFAULT_LIVE_INTERFACE
     mode: str = DEFAULT_LIVE_MODE
+    rotation_enabled: bool = DEFAULT_LIVE_ROTATION_ENABLED
     rotate_seconds: int = DEFAULT_LIVE_ROTATE_SECONDS
     rotate_max_bytes: int = DEFAULT_LIVE_ROTATE_MAX_BYTES
     receive_buffer_bytes: int = DEFAULT_LIVE_RECEIVE_BUFFER_BYTES
@@ -91,6 +95,7 @@ class LiveParserConfig:
     audit_file: str = DEFAULT_LIVE_AUDIT_FILE
     status_file: str = DEFAULT_LIVE_STATUS_FILE
     alert_config_path: str | None = None
+    siem_debug_evidence: bool = DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE
 
 
 def load_parser_config(path: str | Path | None) -> ParserConfig:
@@ -237,6 +242,7 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
             fallback=config.check_fingerprint,
         )
         config.output_status = parser.getboolean("Options", "output_status", fallback=config.output_status)
+        config.siem_debug_evidence = parser.getboolean("Options", "siem_debug_evidence", fallback=config.siem_debug_evidence)
 
     if parser.has_section("Live"):
         if parser.has_option("Live", "interface"):
@@ -244,6 +250,7 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
                 parser.get("Live", "interface", fallback=None)
             ) or ""
         config.mode = _get_string(parser, "Live", "mode", config.mode)
+        config.rotation_enabled = parser.getboolean("Live", "rotation_enabled", fallback=config.rotation_enabled)
         config.rotate_seconds = parser.getint("Live", "rotate_seconds", fallback=config.rotate_seconds)
         config.rotate_max_bytes = parser.getint("Live", "rotate_max_bytes", fallback=config.rotate_max_bytes)
         config.receive_buffer_bytes = parser.getint(

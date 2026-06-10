@@ -74,8 +74,8 @@ Confirm /nsm/ecg exists and is writable by the service runtime:
 Expected files after live operation:
 
 - /nsm/ecg/ecg-current.json
-- /nsm/ecg/ecg-audit.jsonl
-- /nsm/ecg/ecg-status.json
+- /var/log/oad-parser/ecg-audit.jsonl
+- /run/oad-parser/ecg-status.json
 
 ## Bounded live smoke check
 

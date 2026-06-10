@@ -84,18 +84,21 @@ def transform_parse_result_to_legacy_records(
     if result.payload is None:
         return []
 
-    return [
-        transform_envelope_to_legacy_record(
-            envelope=envelope,
-            timestamp_utc=timestamp_utc,
-            interface=interface,
-            ecg_payload=result.payload,
-            packet_metadata=result.packet_metadata or {},
-            parse_warnings=result.warnings,
-            alert_config=alert_config,
-        ).to_dict()
-        for envelope in result.envelopes
-    ]
+    warning_index = _warning_summary_envelope_index(result.envelopes) if result.warnings else None
+    records: List[Dict[str, Any]] = []
+    for index, envelope in enumerate(result.envelopes):
+        records.append(
+            transform_envelope_to_legacy_record(
+                envelope=envelope,
+                timestamp_utc=timestamp_utc,
+                interface=interface,
+                ecg_payload=result.payload,
+                packet_metadata=result.packet_metadata or {},
+                parse_warnings=result.warnings if index == warning_index else (),
+                alert_config=alert_config,
+            ).to_dict()
+        )
+    return records
 
 
 def transform_envelope_to_legacy_record(
@@ -210,6 +213,29 @@ def legacy_fields_for_envelope(
     )
 
     return fields
+
+
+def _warning_summary_envelope_index(envelopes: List[EcgMessageEnvelope]) -> int | None:
+    """Return the one envelope index that should carry packet-level warnings."""
+
+    if not envelopes:
+        return None
+
+    for index, envelope in enumerate(envelopes):
+        if envelope.message_type == "rtqc":
+            return index
+        if envelope.message_name not in PROJECTABLE_RADAR_MESSAGES:
+            continue
+        if envelope.message_type not in PROJECTABLE_RADAR_MESSAGE_TYPES:
+            continue
+        projected = _project_legacy_radar_fields(envelope)
+        if any(
+            projected.get(name) is not None
+            for name in ("range_nm", "azimuth_degrees", "altitude_feet", "mode_3_code", "acp")
+        ):
+            return index
+
+    return 0
 
 
 def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:

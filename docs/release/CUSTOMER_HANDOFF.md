@@ -39,3 +39,7 @@ The customer systemd template uses:
 ## Acceptance boundary
 
 Customer handoff does not claim target-site acceptance. Target-site validation remains pending until executed on the target host with site configuration, connected interface evidence, root/systemd evidence, storage evidence, and SIEM handoff evidence.
+
+## ECG SIEM handoff contract
+
+The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.

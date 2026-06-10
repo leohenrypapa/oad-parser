@@ -509,7 +509,7 @@ def run_live(args: argparse.Namespace) -> int:
             config = replace(config, interface=args.interface)
 
         writer = RotatingJsonlWriter.from_config(config)
-        observability = LiveObservabilityWriters.from_config(config)
+        observability = LiveObservabilityWriters.from_config(config) if config.output_status else None
         storage_policy = LiveStoragePolicy.from_config(config)
 
         if args.max_frames == 0:
@@ -521,8 +521,8 @@ def run_live(args: argparse.Namespace) -> int:
             config,
             capture_frames,
             record_sink=writer.write_record,
-            audit_sink=observability.audit_sink,
-            status_sink=observability.status_sink,
+            audit_sink=observability.audit_sink if observability is not None else None,
+            status_sink=observability.status_sink if observability is not None else None,
             storage_policy=storage_policy,
             max_frames=args.max_frames,
         )

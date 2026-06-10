@@ -16,11 +16,11 @@ This repository does not provide site-specific Elastic Agent, Filebeat, or Logst
 MVP central collection uses append-style files only:
 
     /nsm/ecg/ecg-current.json
-    /nsm/ecg/ecg-audit.jsonl
+    /var/log/oad-parser/ecg-audit.jsonl
 
 Do not centrally collect this local-only file for MVP:
 
-    /nsm/ecg/ecg-status.json
+    /run/oad-parser/ecg-status.json
 
 `ecg-status.json` is replaced as one local JSON object for operator checks. If central status ingestion is required later, add status snapshots to `ecg-audit.jsonl` or add a separate append-style `ecg-status.jsonl`.
 
@@ -43,7 +43,7 @@ Valid ECG events may include a `parse_warnings` list. Warnings do not convert th
 
 The audit output file is:
 
-    /nsm/ecg/ecg-audit.jsonl
+    /var/log/oad-parser/ecg-audit.jsonl
 
 This file is JSON Lines. Each line is one complete JSON object with `record_type` equal to `ecg_audit`.
 
@@ -53,7 +53,7 @@ Audit is intended for aggregate operational evidence such as startup, shutdown, 
 
 The local status file is:
 
-    /nsm/ecg/ecg-status.json
+    /run/oad-parser/ecg-status.json
 
 This is a single JSON object replaced by the parser. It is not JSON Lines and is not part of MVP central collection.
 
@@ -76,8 +76,8 @@ If a rotated filename already exists, a numeric suffix is appended:
 Storage protection prunes only closed rotated output files. It must not delete:
 
     /nsm/ecg/ecg-current.json
-    /nsm/ecg/ecg-audit.jsonl
-    /nsm/ecg/ecg-status.json
+    /var/log/oad-parser/ecg-audit.jsonl
+    /run/oad-parser/ecg-status.json
     unrelated operator files
 
 ## Parser and SIEM ownership boundary
@@ -124,11 +124,11 @@ Check active output is JSON Lines:
 
 Check audit output is JSON Lines:
 
-    sudo tail -n 20 /nsm/ecg/ecg-audit.jsonl
+    sudo tail -n 20 /var/log/oad-parser/ecg-audit.jsonl
 
 Check local status:
 
-    sudo cat /nsm/ecg/ecg-status.json
+    sudo cat /run/oad-parser/ecg-status.json
 
 Check service logs for one interface:
 
@@ -140,8 +140,8 @@ Before enabling central collection, verify:
 
     /nsm/ecg/ecg-current.json exists or will be created by live service
     /nsm/ecg/ecg-current.json is parsed as JSON Lines, not as one JSON document
-    /nsm/ecg/ecg-audit.jsonl is parsed as JSON Lines
-    /nsm/ecg/ecg-status.json is not configured for MVP central collection
+    /var/log/oad-parser/ecg-audit.jsonl is parsed as JSON Lines
+    /run/oad-parser/ecg-status.json is not configured for MVP central collection
     downstream Logstash ownership and index routing are documented outside this repository
     no secrets or site-specific endpoints are committed to this repository
 
@@ -151,9 +151,9 @@ The parser owns these output files:
 
 - `/nsm/ecg/ecg-current.json`
   - JSON Lines active output despite the `.json` suffix.
-- `/nsm/ecg/ecg-audit.jsonl`
+- `/var/log/oad-parser/ecg-audit.jsonl`
   - Audit JSON Lines.
-- `/nsm/ecg/ecg-status.json`
+- `/run/oad-parser/ecg-status.json`
   - Local status snapshot; not the primary MVP central collection stream.
 
 Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final version and site-specific configuration must be confirmed by the SIEM owner. Do not commit SIEM endpoints, tokens, certificates, private keys, hostnames, IPs, index names, or other site-specific values.
@@ -162,4 +162,8 @@ Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but fina
 
 Use `docs/release/target-environment-validation.md` during target handoff.
 
-The parser owns `/nsm/ecg/ecg-current.json`, `/nsm/ecg/ecg-audit.jsonl`, and local `/nsm/ecg/ecg-status.json`. The SIEM owner owns Filebeat/Elastic Agent version confirmation, endpoint, index, certificate, token, pipeline, and deployment configuration. Filebeat/Elastic Agent 8.17.3 remains the expected assumption until the SIEM owner confirms the final site version and configuration.
+The parser owns the default SIEM handoff file `/nsm/ecg/ecg-current.json`; audit and status files are disabled for the operator default and, when explicitly enabled, should use non-handoff paths such as `/var/log/oad-parser` and `/run/oad-parser`. The SIEM owner owns Filebeat/Elastic Agent version confirmation, endpoint, index, certificate, token, pipeline, and deployment configuration. Filebeat/Elastic Agent 8.17.3 remains the expected assumption until the SIEM owner confirms the final site version and configuration.
+
+## ECG SIEM handoff contract
+
+The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.

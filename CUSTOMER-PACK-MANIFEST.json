@@ -51,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-10T18:26:23Z",
+  "generated_at_utc": "2026-06-10T21:47:28Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -85,8 +85,8 @@
     },
     {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "8bbf43ea5fc14669a1111f29b75e6c6e219268e9178a6ae1de899674c61e0cb6",
-      "size_bytes": 877
+      "sha256": "648d2a3475f2ec3c1d94db387a73f6cdd73cc39ec0c8332a9bb95f8036a81e62",
+      "size_bytes": 949
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -105,23 +105,23 @@
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "64c4b671d8a6349de0887e4fe81d2ef957bd0db7402af155770a957bb9a79f90",
-      "size_bytes": 2681
+      "sha256": "67bc878c02dcb1d11ac40777e8ba9168a05a08afff0a594d2b23becb1abef9e2",
+      "size_bytes": 2699
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "58788c15a5317154aa69d31339da97978f7d643035bcf2bb6ba6d178aa839c1a",
-      "size_bytes": 5422
+      "sha256": "15e8c6b5ccd7fdd17c35983e5c64dd84d9fc5cc83267ab67ce0d89df87749c8f",
+      "size_bytes": 6056
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "9d9272458eb772a01b4a51535e57e9023301c892057f05f96478cd9a9a8c50b9",
-      "size_bytes": 6591
+      "sha256": "b264ff6f9b4ac2b1023549247e3559ed7f0db0fd7079d4889ac646ded015db53",
+      "size_bytes": 7016
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
-      "sha256": "a7c574c3088aedad8921cb0571b769c1c538c23bf6e53780e58b8aaa9b964f57",
-      "size_bytes": 1662
+      "sha256": "78887967292c18e5ca7397928bb4d317cf550c129132f488b92cc23907613421",
+      "size_bytes": 2051
     },
     {
       "path": "docs/release/RELEASE_CHECKLIST.md",
@@ -145,8 +145,8 @@
     },
     {
       "path": "oad_parser/cli.py",
-      "sha256": "61297a3087e50b4a9436a82e302a714576816aaf32d186b20b0507f01bfd6e02",
-      "size_bytes": 32515
+      "sha256": "7104de9737e3c4545ccd82d12356dc4bdb93ac4fa9df456ff127be4a29d1ffc6",
+      "size_bytes": 32627
     },
     {
       "path": "oad_parser/compare.py",
@@ -155,8 +155,8 @@
     },
     {
       "path": "oad_parser/config.py",
-      "sha256": "330e1ba31351f44a23db9ea9670c5e8950dcc226185de20f351517d5fdebb911",
-      "size_bytes": 15036
+      "sha256": "cbdcfefa5bfcbbd864bda9be4d0e0c6eb8f5ac1e684f8590c3e56e3b777c24df",
+      "size_bytes": 15554
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -270,13 +270,13 @@
     },
     {
       "path": "oad_parser/live/storage.py",
-      "sha256": "8b773e8b6c35b6a94572663749aa114fee0fade2402a8d5e66bd47b0462d2459",
-      "size_bytes": 7365
+      "sha256": "5eb3414ff8f33ec3006c699d6e35d9cc8b4a6d193c1282b6cf4b0cb3144f10be",
+      "size_bytes": 7383
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "b71097b9ad738f0422e1465f8116b2b8a6070b7b7c1829e5fc627d13f400a153",
-      "size_bytes": 8331
+      "sha256": "5a744c03a85e3413d93141ab1f961a52414a44bbcec9064ed1d48a35e1fa90c9",
+      "size_bytes": 15608
     },
     {
       "path": "oad_parser/models.py",
@@ -330,8 +330,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "4fbf802ccc1b15c72707993e34fe89df4a8126c9c9293ce6d521170c65fabfec",
-      "size_bytes": 9347
+      "sha256": "bb478038291faa46d429b203cb30f246943f84d0e5b5adb382b6c139a7492acb",
+      "size_bytes": 10384
     },
     {
       "path": "pyproject.toml",
@@ -345,8 +345,8 @@
     },
     {
       "path": "scripts/make_customer_pack.sh",
-      "sha256": "29477899d38afe01ab329c9e02142fc96dc828e1cfd58e5fef07f5b825dcfdd3",
-      "size_bytes": 11911
+      "sha256": "200fb5ee8c5e9a0dcd0bf5e401d60d14be825bc0df008b9c76a78973c995b030",
+      "size_bytes": 11929
     },
     {
       "generated": true,
@@ -364,9 +364,9 @@
   ],
   "operational_paths": {
     "active_jsonl": "/nsm/ecg/ecg-current.json",
-    "audit_jsonl": "/nsm/ecg/ecg-audit.jsonl",
+    "audit_jsonl": "/var/log/oad-parser/ecg-audit.jsonl",
     "config": "/etc/oad-parser/ecg_conf.ini",
-    "status_json": "/nsm/ecg/ecg-status.json"
+    "status_json": "/run/oad-parser/ecg-status.json"
   },
   "package_profile": "customer-runtime-operator",
   "purpose": "Customer runtime/operator handoff package for the Sprint 2 live parser foundation.",
@@ -382,14 +382,14 @@
   },
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
-    "dirty_tree_status_at_generation": "clean",
-    "generated_at_utc": "2026-06-10T18:26:23Z",
-    "generated_by_python": "3.9.2",
+    "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
+    "generated_at_utc": "2026-06-10T21:47:28Z",
+    "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
-    "generator_script_sha256": "29477899d38afe01ab329c9e02142fc96dc828e1cfd58e5fef07f5b825dcfdd3",
+    "generator_script_sha256": "200fb5ee8c5e9a0dcd0bf5e401d60d14be825bc0df008b9c76a78973c995b030",
     "pack_format_version": "customer-runtime-operator-pack.v2",
-    "source_branch": "main",
-    "source_commit": "f6a128ff7a42af2539d9f65ac6692ea34cbe8d49",
+    "source_branch": "unavailable-non-git-source-tree",
+    "source_commit": "unavailable-non-git-source-tree",
     "source_remote_or_project": "rapid-capabilities-oad-parser",
     "validation_report_path": null,
     "validation_report_sha256": null

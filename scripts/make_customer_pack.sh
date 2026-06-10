@@ -323,8 +323,8 @@ manifest = {
     "operational_paths": {
         "config": "/etc/oad-parser/ecg_conf.ini",
         "active_jsonl": "/nsm/ecg/ecg-current.json",
-        "audit_jsonl": "/nsm/ecg/ecg-audit.jsonl",
-        "status_json": "/nsm/ecg/ecg-status.json",
+        "audit_jsonl": "/var/log/oad-parser/ecg-audit.jsonl",
+        "status_json": "/run/oad-parser/ecg-status.json",
     },
     "notes": [
         "This customer runtime/operator pack is separate from the internal engineering source pack.",
