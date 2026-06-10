@@ -51,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-10T22:25:35Z",
+  "generated_at_utc": "2026-06-10T22:30:46Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -330,8 +330,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "bb478038291faa46d429b203cb30f246943f84d0e5b5adb382b6c139a7492acb",
-      "size_bytes": 10384
+      "sha256": "de0b30cbc15204cd4c0fd7f5dddf99c3b7c9cf813d1a13e7f6991b4c9ca8bc00",
+      "size_bytes": 9567
     },
     {
       "path": "pyproject.toml",
@@ -383,7 +383,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-10T22:25:35Z",
+    "generated_at_utc": "2026-06-10T22:30:46Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "200fb5ee8c5e9a0dcd0bf5e401d60d14be825bc0df008b9c76a78973c995b030",
