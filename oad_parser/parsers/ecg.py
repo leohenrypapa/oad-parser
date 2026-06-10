@@ -678,6 +678,8 @@ def _resolve_ecg_payload_and_metadata(
             "destination_ip": udp_frame.destination_ip,
             "destination_port": udp_frame.destination_port,
             "ip_total_length": udp_frame.total_length,
+            "udp_checksum": udp_frame.checksum,
+            "udp_checksum_hex": f"0x{udp_frame.checksum:04x}",
         }
 
     if looks_like_ecg_candidate_payload(frame):

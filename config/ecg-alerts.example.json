@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "known_sites": [
+    "SITE_A"
+  ],
+  "allowed_message_types": [
+    "beacon",
+    "search",
+    "rtqc"
+  ],
+  "allowed_message_types_by_site": {
+    "SITE_A": [
+      "beacon",
+      "search",
+      "rtqc"
+    ]
+  },
+  "altitude_min_ft": -1500,
+  "altitude_max_ft": 70000,
+  "max_range_nm": 250.0,
+  "expected_channels": [
+    1,
+    2
+  ],
+  "expected_channels_by_site": {
+    "SITE_A": [
+      1,
+      2
+    ]
+  },
+  "authorized_source_ips": [
+    "EXAMPLE_AUTHORIZED_EXTRACTOR"
+  ],
+  "authorized_destination_ips": [
+    "EXAMPLE_AUTHORIZED_CONSUMER"
+  ],
+  "site_source_ips": {
+    "SITE_A": [
+      "EXAMPLE_AUTHORIZED_EXTRACTOR"
+    ]
+  },
+  "allowed_radar_ports": [
+    0
+  ],
+  "admin_workstation_ips": [
+    "EXAMPLE_ADMIN_WORKSTATION"
+  ],
+  "raw_azimuth_max": 4095
+}

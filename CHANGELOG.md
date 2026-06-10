@@ -68,3 +68,11 @@ Note: this release evidence is local/pre-site only. It does not replace target-s
 - `beacon-candidate` is provisional and non-authoritative.
 - Synthetic, golden, corpus, and platform validation prove regression or self-consistency only.
 - No sanitized operational capture corpus is included.
+
+## Unreleased
+
+- Add additive live ECG/CD2 stateless alert list output for OAD-ECG-001 through OAD-ECG-017.
+- Preserve legacy alert and alert_details scalar compatibility while adding alerts list.
+- Add UDP checksum extraction and live output fields udp_checksum and udp_checksum_hex.
+- Add safe placeholder ECG alert config example using documentation-only addresses.
+- Document Phase 2 stateful and external ASOM detection boundaries.

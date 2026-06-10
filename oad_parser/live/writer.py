@@ -224,7 +224,9 @@ def _compact_live_event_record(record: Dict[str, object]) -> Optional[Dict[str, 
     for key, value in record.items():
         if key in COMPACT_EVENT_DROP_FIELDS:
             continue
-        if value is None or value == []:
+        if value is None:
+            continue
+        if value == [] and key != "alerts":
             continue
 
         output_key = COMPACT_EVENT_RENAME_FIELDS.get(key, key)
@@ -241,7 +243,7 @@ def _compact_live_event_record(record: Dict[str, object]) -> Optional[Dict[str, 
         compact.setdefault("altitude_feet", -1)
 
     if event_type == "rtqc":
-        compact.setdefault("alert", "RTQC")
+        compact.setdefault("alert", "OAD-ECG-001")
         compact.setdefault("alert_details", "RTQC message detected.")
         compact.setdefault("range_nm", -1)
         compact.setdefault("mode_3_code", -1)

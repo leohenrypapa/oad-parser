@@ -1,6 +1,6 @@
 {
   "committed_by_default": false,
-  "entry_count": 59,
+  "entry_count": 61,
   "excluded_by_default": [
     ".git",
     ".gitlab-ci.yml",
@@ -51,7 +51,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-09T22:41:36Z",
+  "generated_at_utc": "2026-06-10T18:26:23Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -60,8 +60,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "b176a336260688c314d2e779481470820ad81d4bc43b35d26575c79bb957beaa",
-      "size_bytes": 4398
+      "sha256": "90dfd63071b4f7541971f639506acc791a30a58f695b7b26e2b10fe304496229",
+      "size_bytes": 4836
     },
     {
       "path": "README.md",
@@ -79,9 +79,14 @@
       "size_bytes": 2292
     },
     {
+      "path": "config/ecg-alerts.example.json",
+      "sha256": "fba81c9b4720d03c609c97ee5891dbe2f02215b25f5fcb081b65ea7005ff5c20",
+      "size_bytes": 799
+    },
+    {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "d79224f00c90f85dd6d5db4a5f80d276637d8b916bca1427b93e6537f46c40af",
-      "size_bytes": 758
+      "sha256": "8bbf43ea5fc14669a1111f29b75e6c6e219268e9178a6ae1de899674c61e0cb6",
+      "size_bytes": 877
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -150,8 +155,8 @@
     },
     {
       "path": "oad_parser/config.py",
-      "sha256": "f558993dfa9e3e2ba190e90b9df059511bdd7d4bef47e128d2b8639c8a2535ae",
-      "size_bytes": 14825
+      "sha256": "330e1ba31351f44a23db9ea9670c5e8950dcc226185de20f351517d5fdebb911",
+      "size_bytes": 15036
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -200,8 +205,8 @@
     },
     {
       "path": "oad_parser/ingest/ethernet.py",
-      "sha256": "2b858eed6fbdfc34bf242d02a608f2a929215d52c9b446e9b67a5dae8d730450",
-      "size_bytes": 4009
+      "sha256": "211aeb24be534b88ff6e727abeadad1402a0d19df998b9932e97a42ed65400af",
+      "size_bytes": 4261
     },
     {
       "path": "oad_parser/ingest/live_socket.py",
@@ -229,14 +234,19 @@
       "size_bytes": 1087
     },
     {
+      "path": "oad_parser/live/alerts.py",
+      "sha256": "a7a7e882fbd7c525c04d2455f872aa5ce52cdd1f48390ec8f6efcb629634295f",
+      "size_bytes": 17890
+    },
+    {
       "path": "oad_parser/live/audit.py",
       "sha256": "630b757210eb86fdd15a56118e4f99cb47fe119f47375f8953d8b8bd846c0f6e",
       "size_bytes": 5082
     },
     {
       "path": "oad_parser/live/classifier.py",
-      "sha256": "dd98a3ad6f77ed6e2c62635e6923bdbc02ae23f5600eb71685f9fc9c1be061b6",
-      "size_bytes": 2969
+      "sha256": "e8186194be18c71d0f43b51172600241eaa9083b852cd141236a79d7e5183a1d",
+      "size_bytes": 3072
     },
     {
       "path": "oad_parser/live/metrics.py",
@@ -245,8 +255,8 @@
     },
     {
       "path": "oad_parser/live/pipeline.py",
-      "sha256": "158341e01396f28790082a703e94f950156f3f3cc691f6e06ce11bb3a8c9beea",
-      "size_bytes": 3243
+      "sha256": "2dc0042bc262171632b01371d24e90d180e8adb1d3e3ab0802c9ccc2f91a1419",
+      "size_bytes": 3376
     },
     {
       "path": "oad_parser/live/records.py",
@@ -255,8 +265,8 @@
     },
     {
       "path": "oad_parser/live/service.py",
-      "sha256": "35a3bcd70e702f815a7f21c8c39e8d7334d223c56059388ae198b9ec103d74b0",
-      "size_bytes": 13661
+      "sha256": "83c4f90680c84a32d783575491d47e183d1bb23f7929908813b0c0940776d911",
+      "size_bytes": 13824
     },
     {
       "path": "oad_parser/live/storage.py",
@@ -265,8 +275,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "d38c3499f324a557e173de0aa283f144e2d0be42a0d54f292625cfd4c9a8e753",
-      "size_bytes": 8274
+      "sha256": "b71097b9ad738f0422e1465f8116b2b8a6070b7b7c1829e5fc627d13f400a153",
+      "size_bytes": 8331
     },
     {
       "path": "oad_parser/models.py",
@@ -290,8 +300,8 @@
     },
     {
       "path": "oad_parser/parsers/ecg.py",
-      "sha256": "541e855473709a228f4fd9817092c2216a9d51cc40447f28157ba3fe654a2081",
-      "size_bytes": 25075
+      "sha256": "667fc8aead1dc342ffd40a5c99b0e466fbe829b751db2b03ace77445638f210a",
+      "size_bytes": 25186
     },
     {
       "path": "oad_parser/protocols/__init__.py",
@@ -320,8 +330,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "25d179555cb3c419e3d835a932031590eaa2e2710316cc8f548ed49780f84835",
-      "size_bytes": 8210
+      "sha256": "4fbf802ccc1b15c72707993e34fe89df4a8126c9c9293ce6d521170c65fabfec",
+      "size_bytes": 9347
     },
     {
       "path": "pyproject.toml",
@@ -335,8 +345,8 @@
     },
     {
       "path": "scripts/make_customer_pack.sh",
-      "sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
-      "size_bytes": 11658
+      "sha256": "29477899d38afe01ab329c9e02142fc96dc828e1cfd58e5fef07f5b825dcfdd3",
+      "size_bytes": 11911
     },
     {
       "generated": true,
@@ -373,13 +383,13 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "clean",
-    "generated_at_utc": "2026-06-09T22:41:36Z",
+    "generated_at_utc": "2026-06-10T18:26:23Z",
     "generated_by_python": "3.9.2",
     "generator_script_path": "scripts/make_customer_pack.sh",
-    "generator_script_sha256": "261a19db67296906d36aa69e39d42a903f761581bdf81fe6da50f9673fcfa955",
+    "generator_script_sha256": "29477899d38afe01ab329c9e02142fc96dc828e1cfd58e5fef07f5b825dcfdd3",
     "pack_format_version": "customer-runtime-operator-pack.v2",
     "source_branch": "main",
-    "source_commit": "862cea33d1c2d1a483df912aedd57fa7cc90116d",
+    "source_commit": "f6a128ff7a42af2539d9f65ac6692ea34cbe8d49",
     "source_remote_or_project": "rapid-capabilities-oad-parser",
     "validation_report_path": null,
     "validation_report_sha256": null

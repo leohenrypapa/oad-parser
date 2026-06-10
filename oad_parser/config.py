@@ -90,6 +90,7 @@ class LiveParserConfig:
 
     audit_file: str = DEFAULT_LIVE_AUDIT_FILE
     status_file: str = DEFAULT_LIVE_STATUS_FILE
+    alert_config_path: str | None = None
 
 
 def load_parser_config(path: str | Path | None) -> ParserConfig:
@@ -295,6 +296,11 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
     if parser.has_section("Audit"):
         config.audit_file = _get_string(parser, "Audit", "audit_file", config.audit_file)
         config.status_file = _get_string(parser, "Audit", "status_file", config.status_file)
+
+    if parser.has_section("Alerts"):
+        config.alert_config_path = _optional_string(
+            parser.get("Alerts", "alert_config_path", fallback=None)
+        )
 
     _apply_existing_ini_fallbacks(parser, config)
     _validate_live_parser_config(config)

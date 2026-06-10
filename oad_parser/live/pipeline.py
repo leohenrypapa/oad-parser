@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from oad_parser.live.alerts import EcgAlertConfig
 from oad_parser.live.classifier import (
     OUTCOME_ECG_CANDIDATE,
     LiveFrameClassification,
@@ -35,6 +36,7 @@ class LivePipelineResult:
 def process_classified_live_frame(
     classification: LiveFrameClassification,
     metrics: Optional[LiveMetrics] = None,
+    alert_config: EcgAlertConfig | None = None,
 ) -> LivePipelineResult:
     """Parse and transform one ECG-candidate classification.
 
@@ -62,6 +64,7 @@ def process_classified_live_frame(
         result=parse_result,
         timestamp_utc=classification.capture_frame.capture_time_utc,
         interface=classification.capture_frame.interface,
+        alert_config=alert_config,
     )
 
     if metrics is not None:

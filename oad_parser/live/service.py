@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Callable, Iterable, Optional
 
 from oad_parser.config import LiveParserConfig
+from oad_parser.live.alerts import load_ecg_alert_config
 from oad_parser.live.audit import audit_record_from_storage_result
 from oad_parser.live.classifier import classify_live_frame
 from oad_parser.live.metrics import LiveMetrics
@@ -79,6 +80,7 @@ def run_live_service(
     storage_critical = False
     last_storage_result: Optional[StorageProtectionResult] = None
     writer_block_started_at: Optional[datetime] = None
+    alert_config = load_ecg_alert_config(config.alert_config_path)
 
     last_error = _emit_audit(
         audit_sink,
@@ -132,6 +134,7 @@ def run_live_service(
         pipeline_result = process_classified_live_frame(
             classification,
             metrics=resolved_metrics,
+            alert_config=alert_config,
         )
 
         if writer_blocked and config.block_when_full:

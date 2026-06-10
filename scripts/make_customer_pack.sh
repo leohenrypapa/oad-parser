@@ -64,6 +64,7 @@ TOP_LEVEL_REQUIRED = [
 
 CONFIG_REQUIRED = [
     "config/ecg_conf.example.ini",
+    "config/ecg-alerts.example.json",
     "config/oad-parser.example.ini",
     "config/oad-cd2-profile.example.ini",
 ]
@@ -263,9 +264,10 @@ def get_filesystem_files():
 
 def get_tracked_files():
     result = git_output(["ls-files"])
-    if result:
-        return [line.strip() for line in result.splitlines() if line.strip()]
-    return get_filesystem_files()
+    tracked = [line.strip() for line in result.splitlines() if line.strip()] if result else []
+    # Include newly added runtime files before they are committed so pre-commit customer-pack validation
+    # uses the same production files that the working tree and tests are validating.
+    return sorted(set(tracked + get_filesystem_files()))
 
 included = []
 for rel in sorted(set(get_tracked_files())):

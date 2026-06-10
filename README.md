@@ -1,38 +1,69 @@
-# OAD Parser Customer Runtime
+# OAD parser customer runtime pack
 
-This repository mirrors the current OAD Parser customer runtime and publishes the installable customer pack as a GitHub Release asset.
+This repository builds the OAD parser customer runtime/operator pack. The customer pack is a runtime deliverable for ECG/CD2 parser operation and troubleshooting. It is separate from internal development, corpus, golden-fixture, source-pack, CI, and platform-control workflows.
 
-## Latest customer pack
+## Customer runtime install model
 
-Release tag:
-customer-pack-20260609T224136Z-862cea33d1c2
+The runtime must be installed into a service-owned Python environment. Do not rely on running from the extracted pack directory.
 
-Asset:
-oad-parser-customer-runtime-20260609T224136Z-862cea33d1c2.tar.gz
+From the extracted customer pack root:
 
-SHA256:
-69738643129c149e6ab287c833d51cf3ae689c3e55a893ecb0179d8646dcd12b
+    sudo python3.9 scripts/install_customer_runtime.py --source . --prefix /opt/oad-parser --force
 
-Source commit:
-862cea33d1c2d1a483df912aedd57fa7cc90116d
+Verify from outside the extracted pack root:
 
-## Sensor5 compact-output fix markers
+    cd /
+    /opt/oad-parser/venv/bin/python -c "import oad_parser; print(oad_parser.__version__)"
+    /opt/oad-parser/venv/bin/python -m oad_parser --help
+    /opt/oad-parser/venv/bin/python -m oad_parser live --help
 
-Expected runtime markers:
+The systemd unit uses the installed interpreter:
 
-- oad_parser/live/writer.py
-  - COMPACT_EVENT_DROP_FIELDS
-  - COMPACT_EVENT_RENAME_FIELDS
-  - def _compact_live_event_record
-  - def _should_emit_live_event
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
 
-- oad_parser/live/service.py
-  - skipped zero-byte compact records do not increment emitted counters
+## Customer/operator commands
 
-- oad_parser/transformers/legacy_ecg.py
-  - per-message fingerprint
-  - projected live radar fields
+The customer runtime profile exposes operator commands only:
 
-## Acceptance boundary
+- inspect-pcap
+- parse-pcap
+- capture
+- live
+- decode-cd2-words
+- extract-ecg-messages
+- compare-legacy-envelope
+- validate
 
-Publication does not claim target-site acceptance. Confirm Sensor5 live output separately before operational closure.
+Development-only corpus, golden-fixture, source-pack, fixture-generation, and platform-validation commands are intentionally not exposed in the customer runtime pack.
+
+## Common paths
+
+- Config: /etc/oad-parser/ecg_conf.ini
+- Runtime output: /nsm/ecg/ecg-current.json
+- Audit output: /nsm/ecg/ecg-audit.jsonl
+- Status output: /nsm/ecg/ecg-status.json
+- Systemd unit source in pack: deploy/systemd/ecg-parser@.service
+
+The ecg-current.json file uses a .json suffix for legacy/runtime familiarity, but it is JSON Lines: one JSON object per line.
+
+## Operator documentation
+
+Read these customer-included files before installation or validation:
+
+1. START_HERE.md
+2. USER_MANUAL.md
+3. docs/ops/systemd-live-parser.md
+4. docs/ops/filebeat-elastic-agent-handoff.md
+5. docs/TROUBLESHOOTING.md
+6. docs/release/CUSTOMER_HANDOFF.md
+7. docs/release/target-environment-validation.md
+
+## Validation boundary
+
+Local customer-pack validation proves archive structure, manifest consistency, customer CLI surface, documentation consistency, and runtime importability through the approved venv install model. It does not prove target-site acceptance.
+
+Target-site acceptance must be run separately on the approved target host with site-owned configuration, connected interfaces, root/systemd checks, storage checks, and SIEM handoff checks.
+
+## Source and customer command surfaces
+
+This source checkout intentionally includes developer validation, governance, CI, and source-pack commands. The customer runtime pack is the authoritative external runtime surface and intentionally excludes development-only tests, CI, source-pack tooling, platform-control tooling, AI handoff context, and local validation reports.

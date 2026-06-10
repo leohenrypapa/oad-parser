@@ -41,6 +41,8 @@ UDP_DESTINATION_PORT_OFFSET_START = 2
 UDP_DESTINATION_PORT_OFFSET_END = 4
 UDP_LENGTH_OFFSET_START = 4
 UDP_LENGTH_OFFSET_END = 6
+UDP_CHECKSUM_OFFSET_START = 6
+UDP_CHECKSUM_OFFSET_END = 8
 
 # Minimum Ethernet + IPv4 + UDP frame size used as a structural guard.
 MIN_IPV4_UDP_FRAME_BYTES = (
@@ -56,6 +58,7 @@ class UdpFrame:
     source_port: int
     destination_port: int
     total_length: int
+    checksum: int
 
 
 def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
@@ -125,6 +128,10 @@ def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
         frame[udp_start + UDP_LENGTH_OFFSET_START : udp_start + UDP_LENGTH_OFFSET_END],
         BYTE_ORDER,
     )
+    checksum = int.from_bytes(
+        frame[udp_start + UDP_CHECKSUM_OFFSET_START : udp_start + UDP_CHECKSUM_OFFSET_END],
+        BYTE_ORDER,
+    )
 
     if udp_length < UDP_HEADER_BYTES:
         return None
@@ -143,6 +150,7 @@ def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
         source_port=source_port,
         destination_port=destination_port,
         total_length=ip_total_length,
+        checksum=checksum,
     )
 
 

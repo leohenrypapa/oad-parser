@@ -20,6 +20,12 @@ from oad_parser.decoders.provisional_beacon_constants import (
 )
 
 from oad_parser.decoders.cd2_radar import decode_beacon_candidate_words
+from oad_parser.live.alerts import (
+    EcgAlertConfig,
+    apply_legacy_alert_fields,
+    evaluate_ecg_parse_error_alerts,
+    evaluate_ecg_record_alerts,
+)
 from oad_parser.live.records import EcgOutputRecord, EcgParseErrorRecord, sha256_hex
 from oad_parser.parsers.ecg import (
     EcgEnvelopeParseIssue,
@@ -44,6 +50,8 @@ LEGACY_PACKET_FIELDS = (
     "destination_ip",
     "destination_port",
     "ip_total_length",
+    "udp_checksum",
+    "udp_checksum_hex",
 )
 
 UNKNOWN_CATEGORICAL_FIELDS = {
@@ -59,6 +67,7 @@ def transform_parse_result_to_legacy_records(
     result: EcgEnvelopeParseResult,
     timestamp_utc: datetime,
     interface: str,
+    alert_config: EcgAlertConfig | None = None,
 ) -> List[Dict[str, Any]]:
     """Transform an ECG parse result into JSON-ready legacy-compatible records."""
 
@@ -68,6 +77,7 @@ def transform_parse_result_to_legacy_records(
                 result=result,
                 timestamp_utc=timestamp_utc,
                 interface=interface,
+                alert_config=alert_config,
             ).to_dict()
         ]
 
@@ -82,6 +92,7 @@ def transform_parse_result_to_legacy_records(
             ecg_payload=result.payload,
             packet_metadata=result.packet_metadata or {},
             parse_warnings=result.warnings,
+            alert_config=alert_config,
         ).to_dict()
         for envelope in result.envelopes
     ]
@@ -94,6 +105,7 @@ def transform_envelope_to_legacy_record(
     ecg_payload: bytes,
     packet_metadata: Dict[str, Any] | None = None,
     parse_warnings: tuple[EcgEnvelopeParseIssue, ...] = (),
+    alert_config: EcgAlertConfig | None = None,
 ) -> EcgOutputRecord:
     """Build one legacy-compatible ECG event record from an envelope."""
 
@@ -101,8 +113,9 @@ def transform_envelope_to_legacy_record(
         envelope,
         ecg_payload,
         parse_warnings=parse_warnings,
+        packet_metadata=packet_metadata or {},
+        alert_config=alert_config,
     )
-    fields.update(_packet_fields(packet_metadata or {}, envelope))
     return EcgOutputRecord(
         timestamp_utc=timestamp_utc,
         interface=interface,
@@ -114,6 +127,7 @@ def transform_parse_error_to_legacy_record(
     result: EcgEnvelopeParseResult,
     timestamp_utc: datetime,
     interface: str,
+    alert_config: EcgAlertConfig | None = None,
 ) -> EcgParseErrorRecord:
     """Build one legacy-compatible ECG parse-error record."""
 
@@ -123,6 +137,16 @@ def transform_parse_error_to_legacy_record(
     payload = result.payload or b""
     packet_metadata = legacy_error_fields()
     packet_metadata.update(_packet_fields(result.packet_metadata or {}, None))
+    apply_legacy_alert_fields(
+        packet_metadata,
+        evaluate_ecg_parse_error_alerts(
+            packet_metadata,
+            error_code=result.error.code,
+            error_message=result.error.message,
+            parser_stage=result.error.parser_stage,
+            config=alert_config,
+        ),
+    )
 
     return EcgParseErrorRecord(
         timestamp_utc=timestamp_utc,
@@ -139,6 +163,8 @@ def legacy_fields_for_envelope(
     envelope: EcgMessageEnvelope,
     ecg_payload: bytes,
     parse_warnings: tuple[EcgEnvelopeParseIssue, ...] = (),
+    packet_metadata: Dict[str, Any] | None = None,
+    alert_config: EcgAlertConfig | None = None,
 ) -> Dict[str, Any]:
     """Return legacy-compatible fields for a valid ECG envelope.
 
@@ -166,18 +192,28 @@ def legacy_fields_for_envelope(
 
     fields.update(_project_legacy_radar_fields(envelope))
 
-    if parse_warnings:
-        fields["parse_warnings"] = _parse_warning_dicts(parse_warnings)
+    parsed_warnings = _parse_warning_dicts(parse_warnings) if parse_warnings else []
+    if parsed_warnings:
+        fields["parse_warnings"] = parsed_warnings
+
+    if packet_metadata is not None:
+        fields.update(_packet_fields(packet_metadata, envelope))
+
+    apply_legacy_alert_fields(
+        fields,
+        evaluate_ecg_record_alerts(
+            fields,
+            data_words=envelope.data_words,
+            parse_warnings=parsed_warnings,
+            config=alert_config,
+        ),
+    )
 
     return fields
 
 
 def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:
     fields: Dict[str, Any] = {name: None for name in LEGACY_NULL_FIELDS}
-
-    if envelope.message_type == "rtqc":
-        fields["alert"] = "RTQC"
-        fields["alert_details"] = "RTQC message detected."
 
     if envelope.message_name not in PROJECTABLE_RADAR_MESSAGES:
         return fields
