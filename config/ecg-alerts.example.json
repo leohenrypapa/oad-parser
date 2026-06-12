@@ -3,6 +3,12 @@
   "known_sites": [
     "SITE_A"
   ],
+  "allowed_source_tuples": [
+    "EXAMPLE_AUTHORIZED_EXTRACTOR|EXAMPLE_AUTHORIZED_CONSUMER|47455|1975|ZAB|SITE_A|1|3|cd-asr"
+  ],
+  "allowed_site_artcc_channel_tuples": [
+    "EXAMPLE_AUTHORIZED_EXTRACTOR|EXAMPLE_AUTHORIZED_CONSUMER|ZAB|SITE_A|1|3|cd-asr"
+  ],
   "allowed_message_types": [
     "beacon",
     "search",
@@ -15,9 +21,6 @@
       "rtqc"
     ]
   },
-  "altitude_min_ft": -1500,
-  "altitude_max_ft": 70000,
-  "max_range_nm": 250.0,
   "expected_channels": [
     1,
     2
@@ -40,8 +43,15 @@
     ]
   },
   "allowed_radar_ports": [
-    0
+    1975,
+    47455
   ],
+  "udp_zero_checksum_allowed": true,
+  "duplicate_payload_window_seconds": 1.0,
+  "duplicate_payload_threshold": 6,
+  "max_sequence_delta": 1,
+  "max_radar_time_delta_seconds": 5.0,
+  "max_router_time_delta_seconds": 5.0,
   "admin_workstation_ips": [
     "EXAMPLE_ADMIN_WORKSTATION"
   ],

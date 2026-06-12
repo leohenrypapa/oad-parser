@@ -14,8 +14,10 @@
     "oad_parser/golden.py",
     "oad_parser/platform_validation.py",
     "oad_parser/source_pack.py",
+    "scripts/build_customer_pack_release.sh",
     "scripts/check_source_pack_manifest.py",
     "scripts/inspect_pcap.sh",
+    "scripts/make_customer_pack.sh",
     "scripts/make_source_pack.sh",
     "scripts/quickstart_check.sh",
     "scripts/run_live_acceptance_6100pps.py",
@@ -51,7 +53,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-10T22:30:46Z",
+  "generated_at_utc": "2026-06-12T13:19:30Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -65,8 +67,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "0f236039ca2ed85c45aa6927a4ad2d26f1c7c07c73bd249c4f0a9c0fd3971e1a",
-      "size_bytes": 2959
+      "sha256": "69ec45b565f9db006dccbb07c38e3057ed895607e25d1b0a8370a97628b4be58",
+      "size_bytes": 3141
     },
     {
       "path": "START_HERE.md",
@@ -75,18 +77,18 @@
     },
     {
       "path": "USER_MANUAL.md",
-      "sha256": "99ade7b6331ad6eab9cd811b1619800b34a341cec79ae574372b6b2c0ae91307",
-      "size_bytes": 2292
+      "sha256": "f6977682f31db23092c2062415a3e29b317ee9107b93943890bf880a594ca208",
+      "size_bytes": 2519
     },
     {
       "path": "config/ecg-alerts.example.json",
-      "sha256": "fba81c9b4720d03c609c97ee5891dbe2f02215b25f5fcb081b65ea7005ff5c20",
-      "size_bytes": 799
+      "sha256": "d1b6d866690256c40ed71c208bf53d794fd884faeada90b691976f6cbd8acbf5",
+      "size_bytes": 1215
     },
     {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "648d2a3475f2ec3c1d94db387a73f6cdd73cc39ec0c8332a9bb95f8036a81e62",
-      "size_bytes": 949
+      "sha256": "3f1c41d7e689f717a1ceed4e882faa24b982a1e1973b581bbbc77ee20f8f153d",
+      "size_bytes": 1429
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -105,18 +107,18 @@
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "67bc878c02dcb1d11ac40777e8ba9168a05a08afff0a594d2b23becb1abef9e2",
-      "size_bytes": 2699
+      "sha256": "dfc0ad9f73664e3abd5447f5fa13cdfee33c076bc86a3f8e3d30aea18433241f",
+      "size_bytes": 2774
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "15e8c6b5ccd7fdd17c35983e5c64dd84d9fc5cc83267ab67ce0d89df87749c8f",
-      "size_bytes": 6056
+      "sha256": "5d5211fcf97e533106231dc5ed3788ab9fe67ab60800c5d0131b81487a5ddb21",
+      "size_bytes": 6575
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "b264ff6f9b4ac2b1023549247e3559ed7f0db0fd7079d4889ac646ded015db53",
-      "size_bytes": 7016
+      "sha256": "8f47bb345b65d21116232d14195f95e7c2db47b5f559c5e4a25684376d0eb5a9",
+      "size_bytes": 7352
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
@@ -124,9 +126,14 @@
       "size_bytes": 2051
     },
     {
+      "path": "docs/release/CUSTOMER_PACK_POLICY.md",
+      "sha256": "75074d16e9ce190f54834a0355d1c38f2ad06bf1c749e42d42c20c998a0f299e",
+      "size_bytes": 1482
+    },
+    {
       "path": "docs/release/RELEASE_CHECKLIST.md",
-      "sha256": "941c13fb2c29bcd2f16f9d002789d272d060f9173508cd33843903b2fa110b34",
-      "size_bytes": 1594
+      "sha256": "53c9b934f4eb4935e8816f78e4e577fc505b6a6c9c57e7afede64c0262f5f948",
+      "size_bytes": 1643
     },
     {
       "path": "docs/release/target-environment-validation.md",
@@ -155,8 +162,8 @@
     },
     {
       "path": "oad_parser/config.py",
-      "sha256": "cbdcfefa5bfcbbd864bda9be4d0e0c6eb8f5ac1e684f8590c3e56e3b777c24df",
-      "size_bytes": 15554
+      "sha256": "5532523862cc7c03473c1d2e6cbe81dc2236c38e77940be2b7e2b64e03737ae4",
+      "size_bytes": 16656
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -185,8 +192,8 @@
     },
     {
       "path": "oad_parser/detectors/state.py",
-      "sha256": "ad221f8b5c6c7ba168e39cf6e8962ca1167ba9ccb4f363a262374ec3eb19468b",
-      "size_bytes": 8869
+      "sha256": "97d40112a7b498ca9b1d4d78beeb8cbc94c0a5be977b04700d36982f652b095e",
+      "size_bytes": 12281
     },
     {
       "path": "oad_parser/errors.py",
@@ -205,8 +212,8 @@
     },
     {
       "path": "oad_parser/ingest/ethernet.py",
-      "sha256": "211aeb24be534b88ff6e727abeadad1402a0d19df998b9932e97a42ed65400af",
-      "size_bytes": 4261
+      "sha256": "adf702bc5f92e61ec4f253f47bd32c7156d6721f9581e569904dc2eeaa41e014",
+      "size_bytes": 5738
     },
     {
       "path": "oad_parser/ingest/live_socket.py",
@@ -235,8 +242,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "a7a7e882fbd7c525c04d2455f872aa5ce52cdd1f48390ec8f6efcb629634295f",
-      "size_bytes": 17890
+      "sha256": "1ab49cbef5ebf24e65869ce75b2bce1bf35b38e27f6c1b16034061b01e27ac5b",
+      "size_bytes": 25311
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -245,8 +252,8 @@
     },
     {
       "path": "oad_parser/live/classifier.py",
-      "sha256": "e8186194be18c71d0f43b51172600241eaa9083b852cd141236a79d7e5183a1d",
-      "size_bytes": 3072
+      "sha256": "27961baf538dfbd01c0aec151626da6ddcedac42ccaa934e09d9575fd249967d",
+      "size_bytes": 3282
     },
     {
       "path": "oad_parser/live/metrics.py",
@@ -255,8 +262,8 @@
     },
     {
       "path": "oad_parser/live/pipeline.py",
-      "sha256": "2dc0042bc262171632b01371d24e90d180e8adb1d3e3ab0802c9ccc2f91a1419",
-      "size_bytes": 3376
+      "sha256": "5c93ac476c26c8a13e05a23c042d9fa8365b29f429e32a647da2052898b35bc0",
+      "size_bytes": 13106
     },
     {
       "path": "oad_parser/live/records.py",
@@ -265,8 +272,8 @@
     },
     {
       "path": "oad_parser/live/service.py",
-      "sha256": "83c4f90680c84a32d783575491d47e183d1bb23f7929908813b0c0940776d911",
-      "size_bytes": 13824
+      "sha256": "67f5bfb1d2cde29935f66893a1d2b1d3f8a2dd6dd3c6a9934664e4a3cee9f407",
+      "size_bytes": 13927
     },
     {
       "path": "oad_parser/live/storage.py",
@@ -275,8 +282,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "5a744c03a85e3413d93141ab1f961a52414a44bbcec9064ed1d48a35e1fa90c9",
-      "size_bytes": 15608
+      "sha256": "700151c691f6b17b33c9d0545536e26c7b25b71b4c46f76592abf39dbeaf28a3",
+      "size_bytes": 23377
     },
     {
       "path": "oad_parser/models.py",
@@ -300,8 +307,8 @@
     },
     {
       "path": "oad_parser/parsers/ecg.py",
-      "sha256": "667fc8aead1dc342ffd40a5c99b0e466fbe829b751db2b03ace77445638f210a",
-      "size_bytes": 25186
+      "sha256": "1b4356fb3140cf6834021928fc54b295b9da44c60a8db79ea6fcf07923553ed7",
+      "size_bytes": 27390
     },
     {
       "path": "oad_parser/protocols/__init__.py",
@@ -330,8 +337,8 @@
     },
     {
       "path": "oad_parser/transformers/legacy_ecg.py",
-      "sha256": "de0b30cbc15204cd4c0fd7f5dddf99c3b7c9cf813d1a13e7f6991b4c9ca8bc00",
-      "size_bytes": 9567
+      "sha256": "a20a8ac39d4a2eac2131bfde12cb5edfd9ba8a4b3e307ce415142c5c7f6d29d3",
+      "size_bytes": 12149
     },
     {
       "path": "pyproject.toml",
@@ -344,11 +351,6 @@
       "size_bytes": 4344
     },
     {
-      "path": "scripts/make_customer_pack.sh",
-      "sha256": "200fb5ee8c5e9a0dcd0bf5e401d60d14be825bc0df008b9c76a78973c995b030",
-      "size_bytes": 11929
-    },
-    {
       "generated": true,
       "path": "oad_parser/_customer_runtime_profile.py",
       "sha256": "94f55e2ad483c0cad83ceb7ec052d70407090d41dd1ca18927b31c3666ad7017",
@@ -358,15 +360,15 @@
   "notes": [
     "This customer runtime/operator pack is separate from the internal engineering source pack.",
     "Development-only CI, tests, source-pack, corpus, golden-fixture, and AI/dev workflow files are excluded by default.",
-    "/nsm/ecg/ecg-current.json contains JSON Lines despite the .json suffix.",
+    "/nsm/ecg/ecg-current.json contains JSON Lines despite the .json suffix and is the only default SIEM handoff file under /nsm/ecg.",
     "Filebeat/Elastic Agent 8.17.3 remains an expected assumption; final version and site config must be confirmed by the SIEM owner.",
     "This pack must not contain real PCAPs, raw operational payloads, secrets, local reports, runtime outputs, or site-specific values."
   ],
   "operational_paths": {
-    "active_jsonl": "/nsm/ecg/ecg-current.json",
-    "audit_jsonl": "/var/log/oad-parser/ecg-audit.jsonl",
     "config": "/etc/oad-parser/ecg_conf.ini",
-    "status_json": "/run/oad-parser/ecg-status.json"
+    "default_siem_jsonl": "/nsm/ecg/ecg-current.json",
+    "optional_audit_jsonl": "/var/log/oad-parser/ecg-audit.jsonl",
+    "optional_status_json": "/run/oad-parser/ecg-status.json"
   },
   "package_profile": "customer-runtime-operator",
   "purpose": "Customer runtime/operator handoff package for the Sprint 2 live parser foundation.",
@@ -383,10 +385,10 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-10T22:30:46Z",
+    "generated_at_utc": "2026-06-12T13:19:30Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
-    "generator_script_sha256": "200fb5ee8c5e9a0dcd0bf5e401d60d14be825bc0df008b9c76a78973c995b030",
+    "generator_script_sha256": "8afee16e3ccd74ace5c5cc044e88630cf4b4107689eb70f27b953f5ce22e151d",
     "pack_format_version": "customer-runtime-operator-pack.v2",
     "source_branch": "unavailable-non-git-source-tree",
     "source_commit": "unavailable-non-git-source-tree",

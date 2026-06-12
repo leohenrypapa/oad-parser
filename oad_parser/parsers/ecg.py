@@ -130,6 +130,10 @@ class EcgMessageEnvelope:
     data_words: tuple[int, ...]
     message_type: str
     modec_valid: bool
+    beacon_message: bool = False
+    search_message: bool = False
+    rtqc_message: bool = False
+    channel_raw_byte: int | None = None
     source_ip: str | None = None
     source_port: int | None = None
     destination_ip: str | None = None
@@ -144,6 +148,7 @@ class EcgMessageEnvelope:
             "message_name": self.message_name,
             "sequence": self.sequence,
             "channel": self.channel,
+            "channel_raw_byte": self.channel_raw_byte,
             "router_timestamp": self.router_timestamp,
             "radar_timestamp": self.radar_timestamp,
             "message_data_length": self.message_data_length,
@@ -151,6 +156,9 @@ class EcgMessageEnvelope:
             "data_words_hex": [f"0x{word:04x}" for word in self.data_words],
             "message_type": self.message_type,
             "modec_valid": self.modec_valid,
+            "beacon_message": self.beacon_message,
+            "search_message": self.search_message,
+            "rtqc_message": self.rtqc_message,
             "source_ip": self.source_ip,
             "source_port": self.source_port,
             "destination_ip": self.destination_ip,
@@ -175,6 +183,9 @@ class EcgEnvelopeParseResult:
     warnings: tuple[EcgEnvelopeParseIssue, ...] = ()
     payload: bytes | None = None
     packet_metadata: dict[str, object] | None = None
+    frame_length_claimed: int | None = None
+    frame_length_expected: int | None = None
+    frame_length_valid: bool | None = None
 
     @property
     def is_error(self) -> bool:
@@ -285,6 +296,7 @@ def extract_ecg_messages(
                 message_name=_message_name(message_code),
                 sequence=payload[offset + SEQUENCE_OFFSET],
                 channel=(payload[offset + CHANNEL_OFFSET] & CHANNEL_MASK) >> CHANNEL_SHIFT,
+                channel_raw_byte=payload[offset + CHANNEL_OFFSET],
                 router_timestamp=router_timestamp,
                 radar_timestamp=(
                     int.from_bytes(
@@ -300,6 +312,9 @@ def extract_ecg_messages(
                 data_words=data_words,
                 message_type=message_type,
                 modec_valid=modec_valid,
+                beacon_message=beacon_message,
+                search_message=search_message,
+                rtqc_message=rtqc_message,
                 source_ip=source_ip,
                 source_port=source_port,
                 destination_ip=destination_ip,
@@ -338,6 +353,14 @@ def extract_ecg_messages_with_errors(
             packet_metadata=packet_metadata,
         )
 
+    frame_length_claimed = int.from_bytes(payload[:BYTES_PER_WORD], BYTE_ORDER) if len(payload) >= BYTES_PER_WORD else None
+    frame_length_expected = len(payload) - ECG_LENGTH_TRAILER_BYTES
+    frame_length_valid = (
+        frame_length_claimed == frame_length_expected
+        if frame_length_claimed is not None and frame_length_expected >= 0
+        else False
+    )
+
     if len(payload) < ECG_MIN_PAYLOAD_BYTES:
         return EcgEnvelopeParseResult(
             envelopes=[],
@@ -348,10 +371,13 @@ def extract_ecg_messages_with_errors(
             ),
             payload=payload,
             packet_metadata=packet_metadata,
+            frame_length_claimed=frame_length_claimed,
+            frame_length_expected=frame_length_expected,
+            frame_length_valid=frame_length_valid,
         )
 
-    ecg_payload_length = int.from_bytes(payload[:BYTES_PER_WORD], BYTE_ORDER)
-    expected_payload_length = len(payload) - ECG_LENGTH_TRAILER_BYTES
+    ecg_payload_length = frame_length_claimed
+    expected_payload_length = frame_length_expected
     if ecg_payload_length != expected_payload_length:
         return EcgEnvelopeParseResult(
             envelopes=[],
@@ -365,6 +391,9 @@ def extract_ecg_messages_with_errors(
             ),
             payload=payload,
             packet_metadata=packet_metadata,
+            frame_length_claimed=frame_length_claimed,
+            frame_length_expected=frame_length_expected,
+            frame_length_valid=frame_length_valid,
         )
 
     block_issue = _validate_ecg_message_blocks(payload)
@@ -374,6 +403,9 @@ def extract_ecg_messages_with_errors(
             error=block_issue,
             payload=payload,
             packet_metadata=packet_metadata,
+            frame_length_claimed=frame_length_claimed,
+            frame_length_expected=frame_length_expected,
+            frame_length_valid=frame_length_valid,
         )
 
     envelopes = extract_ecg_messages(frame, skip_headers=skip_headers)
@@ -384,6 +416,9 @@ def extract_ecg_messages_with_errors(
         warnings=warnings,
         payload=payload,
         packet_metadata=packet_metadata,
+        frame_length_claimed=frame_length_claimed,
+        frame_length_expected=frame_length_expected,
+        frame_length_valid=frame_length_valid,
     )
 
 
@@ -482,7 +517,11 @@ def parse_frame(
         else:
             record.message_type = "none"
 
-        if (beacon_message or search_message) and record.message in {"cd-2", "cd-asr", "mar"}:
+        if (
+            (beacon_message or search_message)
+            and not rtqc_message
+            and record.message in {"cd-2", "cd-asr", "mar"}
+        ):
             _extract_plot_words(
                 payload=payload,
                 message_payload_start=message_payload_start,
@@ -496,8 +535,6 @@ def parse_frame(
                 payload[:ECG_MESSAGE_BLOCK_HEADER_BYTES]
                 + payload[message_payload_start:message_payload_end]
             ).hexdigest()
-            if rtqc_message:
-                record.extra["classification_flags"] = ["rtqc_bit_set"]
             records.append(record)
         elif rtqc_message:
             record.alert = "RTQC"
@@ -650,6 +687,9 @@ def _extract_plot_words(
             payload[word_offset : word_offset + BYTES_PER_WORD], BYTE_ORDER
         )
 
+        if _word_has_legacy_status_bit(word):
+            continue
+
         if index == RANGE_WORD_INDEX:
             record.range_nm = int((word & RANGE_WORD_MASK) >> RANGE_WORD_SHIFT) * RANGE_NM_SCALE
         elif index == ACP_WORD_INDEX:
@@ -662,6 +702,13 @@ def _extract_plot_words(
             if int((word & ALTITUDE_SIGN_MASK) >> ALTITUDE_SIGN_SHIFT) == 1:
                 altitude *= -1
             record.altitude_feet = altitude
+
+def _word_has_legacy_status_bit(word: int) -> bool:
+    high_byte = (word >> 8) & 0xFF
+    parity_error = (high_byte & WORD_PARITY_ERROR_MASK) >> WORD_PARITY_ERROR_SHIFT == 1
+    malfunction = (high_byte & WORD_MALFUNCTION_MASK) >> WORD_MALFUNCTION_SHIFT == 1
+    return parity_error or malfunction
+
 
 def _resolve_ecg_payload_and_metadata(
     frame: bytes,
@@ -677,9 +724,13 @@ def _resolve_ecg_payload_and_metadata(
             "source_port": udp_frame.source_port,
             "destination_ip": udp_frame.destination_ip,
             "destination_port": udp_frame.destination_port,
+            "network_bytes": udp_frame.network_bytes,
             "ip_total_length": udp_frame.total_length,
+            "udp_length": udp_frame.udp_length,
+            "udp_payload_length": udp_frame.udp_payload_length,
             "udp_checksum": udp_frame.checksum,
             "udp_checksum_hex": f"0x{udp_frame.checksum:04x}",
+            "udp_checksum_valid": udp_frame.checksum_valid,
         }
 
     if looks_like_ecg_candidate_payload(frame):

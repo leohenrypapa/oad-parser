@@ -17,7 +17,7 @@ from oad_parser.live.alerts import load_ecg_alert_config
 from oad_parser.live.audit import audit_record_from_storage_result
 from oad_parser.live.classifier import classify_live_frame
 from oad_parser.live.metrics import LiveMetrics
-from oad_parser.live.pipeline import process_classified_live_frame
+from oad_parser.live.pipeline import LiveSequenceState, process_classified_live_frame
 from oad_parser.live.records import (
     EcgAuditRecord,
     EcgStatusSnapshot,
@@ -81,6 +81,7 @@ def run_live_service(
     last_storage_result: Optional[StorageProtectionResult] = None
     writer_block_started_at: Optional[datetime] = None
     alert_config = load_ecg_alert_config(config.alert_config_path)
+    sequence_state = LiveSequenceState()
 
     last_error = _emit_audit(
         audit_sink,
@@ -135,6 +136,7 @@ def run_live_service(
             classification,
             metrics=resolved_metrics,
             alert_config=alert_config,
+            sequence_state=sequence_state,
         )
 
         if writer_blocked and config.block_when_full:

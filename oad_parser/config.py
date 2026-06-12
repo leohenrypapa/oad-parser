@@ -28,6 +28,9 @@ DEFAULT_LIVE_ROTATE_MAX_BYTES = 536870912
 DEFAULT_LIVE_ROTATION_ENABLED = False
 DEFAULT_LIVE_OUTPUT_STATUS = False
 DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE = False
+DEFAULT_LIVE_NORMAL_RECORD_SAMPLE_RATE = 1000
+DEFAULT_LIVE_EMIT_PARSE_WARNING_ALERTS = False
+DEFAULT_LIVE_EMIT_MODEC_ALTITUDE_MISSING_ALERTS = False
 DEFAULT_LIVE_RECEIVE_BUFFER_BYTES = 134217728
 DEFAULT_LIVE_STATUS_INTERVAL_SECONDS = 60
 DEFAULT_LIVE_METRICS_INTERVAL_SECONDS = 60
@@ -96,6 +99,9 @@ class LiveParserConfig:
     status_file: str = DEFAULT_LIVE_STATUS_FILE
     alert_config_path: str | None = None
     siem_debug_evidence: bool = DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE
+    normal_record_sample_rate: int = DEFAULT_LIVE_NORMAL_RECORD_SAMPLE_RATE
+    emit_parse_warning_alerts: bool = DEFAULT_LIVE_EMIT_PARSE_WARNING_ALERTS
+    emit_modec_altitude_missing_alerts: bool = DEFAULT_LIVE_EMIT_MODEC_ALTITUDE_MISSING_ALERTS
 
 
 def load_parser_config(path: str | Path | None) -> ParserConfig:
@@ -268,6 +274,21 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
             "metrics_interval_seconds",
             fallback=config.metrics_interval_seconds,
         )
+        config.normal_record_sample_rate = parser.getint(
+            "Live",
+            "normal_record_sample_rate",
+            fallback=config.normal_record_sample_rate,
+        )
+        config.emit_parse_warning_alerts = parser.getboolean(
+            "Live",
+            "emit_parse_warning_alerts",
+            fallback=config.emit_parse_warning_alerts,
+        )
+        config.emit_modec_altitude_missing_alerts = parser.getboolean(
+            "Live",
+            "emit_modec_altitude_missing_alerts",
+            fallback=config.emit_modec_altitude_missing_alerts,
+        )
 
     if parser.has_section("Storage"):
         config.output_dir = _get_string(parser, "Storage", "output_dir", config.output_dir)
@@ -360,6 +381,9 @@ def _validate_live_parser_config(config: LiveParserConfig) -> None:
 
     if config.receive_buffer_bytes < 1:
         raise ValueError("live receive_buffer_bytes must be >= 1")
+
+    if config.normal_record_sample_rate < 1:
+        raise ValueError("live normal_record_sample_rate must be >= 1")
 
     if config.status_interval_seconds < 1:
         raise ValueError("live status_interval_seconds must be >= 1")

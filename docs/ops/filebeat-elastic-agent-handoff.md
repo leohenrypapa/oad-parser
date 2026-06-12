@@ -167,3 +167,17 @@ The parser owns the default SIEM handoff file `/nsm/ecg/ecg-current.json`; audit
 ## ECG SIEM handoff contract
 
 The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.
+
+## 2026-06-12 ECG output-volume tuning update
+
+Marker: 2026-06-12 ECG output-volume tuning update
+
+Validated live ECG defaults:
+
+```text
+normal_record_sample_rate = 1000
+emit_parse_warning_alerts = False
+emit_modec_altitude_missing_alerts = False
+```
+
+`/nsm/ecg/ecg-current.json` remains JSON Lines. Normal accepted traffic is sampled. Parser warnings remain in `parser.validation.warnings`, but accepted parse warnings and accepted Mode C altitude-missing conditions are not emitted as SIEM alert objects by default.

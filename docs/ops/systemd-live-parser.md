@@ -191,3 +191,9 @@ Live JSONL, audit, and status records include `parser_name`, `parser_version`, `
 ## ECG SIEM handoff contract
 
 The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.
+
+## 2026-06-12 ECG output-volume tuning update
+
+Marker: 2026-06-12 ECG output-volume tuning update
+
+For validated `eno4` deployment, keep boot persistence disabled until the operator and SIEM owner accept sampled output. The second-patch evidence run intentionally stopped `ecg-parser@eno4.service` after collection to freeze evidence.

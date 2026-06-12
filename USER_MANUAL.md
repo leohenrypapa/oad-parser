@@ -42,9 +42,11 @@ Production systemd service commands must not add --max-frames. That option is on
 
 ## Runtime files
 
-- /nsm/ecg/ecg-current.json contains JSON Lines records.
-- /nsm/ecg/ecg-audit.jsonl contains audit records.
-- /nsm/ecg/ecg-status.json contains the local status snapshot.
+- /nsm/ecg/ecg-current.json contains the default SIEM JSON Lines handoff records.
+- /var/log/oad-parser/ecg-audit.jsonl is optional audit output only when observability is explicitly enabled.
+- /run/oad-parser/ecg-status.json is optional local status output only when observability is explicitly enabled.
+
+The default customer/operator handoff writes only /nsm/ecg/ecg-current.json under /nsm/ecg.
 
 ## Troubleshooting
 

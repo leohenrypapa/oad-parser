@@ -71,9 +71,12 @@ Confirm /nsm/ecg exists and is writable by the service runtime:
 
     ls -ld /nsm/ecg
 
-Expected files after live operation:
+Expected default file after live operation:
 
 - /nsm/ecg/ecg-current.json
+
+Optional observability files appear only when explicitly enabled:
+
 - /var/log/oad-parser/ecg-audit.jsonl
 - /run/oad-parser/ecg-status.json
 

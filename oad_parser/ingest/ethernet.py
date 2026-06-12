@@ -59,6 +59,10 @@ class UdpFrame:
     destination_port: int
     total_length: int
     checksum: int
+    network_bytes: int
+    udp_length: int
+    udp_payload_length: int
+    checksum_valid: bool | None
 
 
 def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
@@ -142,6 +146,13 @@ def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
 
     payload_start = udp_start + UDP_HEADER_BYTES
     payload = frame[payload_start:udp_end]
+    udp_segment = frame[udp_start:udp_end]
+    checksum_valid = validate_ipv4_udp_checksum(
+        source_ip=frame[ip_start + IP_SOURCE_OFFSET_START : ip_start + IP_SOURCE_OFFSET_END],
+        destination_ip=frame[ip_start + IP_DESTINATION_OFFSET_START : ip_start + IP_DESTINATION_OFFSET_END],
+        udp_segment=udp_segment,
+        checksum=checksum,
+    )
 
     return UdpFrame(
         payload=payload,
@@ -151,7 +162,47 @@ def parse_ipv4_udp_frame(frame: bytes) -> UdpFrame | None:
         destination_port=destination_port,
         total_length=ip_total_length,
         checksum=checksum,
+        network_bytes=len(frame),
+        udp_length=udp_length,
+        udp_payload_length=len(payload),
+        checksum_valid=checksum_valid,
     )
+
+
+def validate_ipv4_udp_checksum(
+    *,
+    source_ip: bytes,
+    destination_ip: bytes,
+    udp_segment: bytes,
+    checksum: int,
+) -> bool | None:
+    """Return UDP checksum validity, or None when IPv4 checksum is disabled."""
+
+    if checksum == 0:
+        return None
+
+    pseudo_header = (
+        source_ip
+        + destination_ip
+        + bytes([0, IP_PROTOCOL_UDP])
+        + len(udp_segment).to_bytes(2, BYTE_ORDER)
+    )
+    return _internet_checksum(pseudo_header + udp_segment) == 0
+
+
+def _internet_checksum(data: bytes) -> int:
+    if len(data) % 2:
+        data += b"\x00"
+
+    total = 0
+    for index in range(0, len(data), 2):
+        total += int.from_bytes(data[index : index + 2], BYTE_ORDER)
+        total = (total & 0xFFFF) + (total >> 16)
+
+    while total >> 16:
+        total = (total & 0xFFFF) + (total >> 16)
+
+    return (~total) & 0xFFFF
 
 
 def format_ipv4(value: bytes) -> str:

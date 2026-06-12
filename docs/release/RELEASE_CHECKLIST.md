@@ -30,7 +30,7 @@ From another directory:
 
 ## Target-site boundary
 
-Do not mark target-site acceptance complete from customer-pack validation alone. Target-site acceptance requires approved host evidence for Oracle Linux, Python runtime, systemd, connected interfaces, /nsm/ecg storage, live output, audit/status output, and SIEM handoff assumptions.
+Do not mark target-site acceptance complete from customer-pack validation alone. Target-site acceptance requires approved host evidence for Oracle Linux, Python runtime, systemd, connected interfaces, /nsm/ecg storage, default live SIEM handoff output, optional observability output only when enabled, and SIEM handoff assumptions.
 
 ## Governance boundary
 

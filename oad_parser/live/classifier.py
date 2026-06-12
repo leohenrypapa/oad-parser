@@ -87,7 +87,11 @@ def packet_metadata_from_udp_frame(udp_frame: UdpFrame) -> Dict[str, Any]:
         "source_port": udp_frame.source_port,
         "destination_ip": udp_frame.destination_ip,
         "destination_port": udp_frame.destination_port,
+        "network_bytes": udp_frame.network_bytes,
         "ip_total_length": udp_frame.total_length,
+        "udp_length": udp_frame.udp_length,
+        "udp_payload_length": udp_frame.udp_payload_length,
         "udp_checksum": udp_frame.checksum,
         "udp_checksum_hex": f"0x{udp_frame.checksum:04x}",
+        "udp_checksum_valid": udp_frame.checksum_valid,
     }

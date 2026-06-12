@@ -26,62 +26,96 @@ class JsonlWriteResult:
 
 SIEM_EVENT_FIELDS = (
     "@timestamp",
-    "artcc",
-    "site_id",
-    "message",
-    "type",
-    "sequence",
-    "channel",
-    "router_timestamp",
-    "radar_timestamp",
-    "range_nm",
-    "azimuth_degrees",
-    "altitude_feet",
-    "mode_3_code",
-    "acp",
+    "event.created",
+    "observer.ingress.interface",
     "source.ip",
-    "source.port",
     "destination.ip",
+    "source.port",
     "destination.port",
-    "tot.bytes",
-    "udp_checksum",
-    "udp_checksum_hex",
+    "network.bytes",
+    "udp.length",
+    "udp.payload.length",
+    "udp.checksum.valid",
+    "udp.checksum.value_hex",
+    "ecg.frame.length.claimed",
+    "ecg.frame.length.expected",
+    "ecg.frame.length_valid",
+    "ecg.artcc",
+    "ecg.outer_message.code",
+    "ecg.outer_message.name",
+    "cd2.site.id",
+    "cd2.message.code",
+    "cd2.message.name",
+    "cd2.sequence",
+    "cd2.channel",
+    "cd2.channel_raw_byte",
+    "ecg.router.timestamp_sec",
+    "cd2.radar.timestamp_sec",
+    "radar.subtypes",
+    "radar.range_nm",
+    "radar.acp",
+    "radar.azimuth_degrees",
+    "radar.mode_3_code",
+    "radar.altitude_feet",
+    "hash.payload.sha256",
+    "hash.message.sha256",
+    "ecg.fingerprint",
+    "parser.validation.accepted",
+    "parser.validation.drop_reason",
+    "parser.validation.warnings",
+    "security.sequence.delta",
+    "alerts",
 )
 
+SIEM_OPTIONAL_EVENT_FIELDS = (
+    "event.sample.rate",
+)
+
+
 SIEM_FIELD_RENAMES = {
+    "interface": "observer.ingress.interface",
     "source_ip": "source.ip",
     "destination_ip": "destination.ip",
     "source_port": "source.port",
     "destination_port": "destination.port",
-    "ip_total_length": "tot.bytes",
-    "message_type": "type",
+    "network_bytes": "network.bytes",
+    "ip_total_length": "network.bytes",
+    "udp_length": "udp.length",
+    "udp_payload_length": "udp.payload.length",
+    "udp_checksum_valid": "udp.checksum.valid",
+    "udp_checksum_hex": "udp.checksum.value_hex",
+    "ecg_frame_length_claimed": "ecg.frame.length.claimed",
+    "ecg_frame_length_expected": "ecg.frame.length.expected",
+    "ecg_frame_length_valid": "ecg.frame.length_valid",
+    "artcc": "ecg.artcc",
+    "ecg_message": "ecg.outer_message.code",
+    "outer_message_name": "ecg.outer_message.name",
+    "site_id": "cd2.site.id",
+    "message_code": "cd2.message.code",
+    "message": "cd2.message.name",
+    "sequence": "cd2.sequence",
+    "channel": "cd2.channel",
+    "channel_raw_byte": "cd2.channel_raw_byte",
+    "router_timestamp": "ecg.router.timestamp_sec",
+    "radar_timestamp": "cd2.radar.timestamp_sec",
+    "radar_subtypes": "radar.subtypes",
+    "range_nm": "radar.range_nm",
+    "acp": "radar.acp",
+    "azimuth_degrees": "radar.azimuth_degrees",
+    "mode_3_code": "radar.mode_3_code",
+    "altitude_feet": "radar.altitude_feet",
+    "sha256_ecg_payload": "hash.payload.sha256",
+    "hash_payload_sha256": "hash.payload.sha256",
+    "hash_message_sha256": "hash.message.sha256",
+    "fingerprint": "ecg.fingerprint",
+    "parser_validation_accepted": "parser.validation.accepted",
+    "parser_validation_drop_reason": "parser.validation.drop_reason",
+    "parser_validation_warnings": "parser.validation.warnings",
+    "parse_warnings": "parser.validation.warnings",
+    "sequence_delta": "security.sequence.delta",
 }
 
-SIEM_PARSE_ERROR_FIELDS = (
-    "@timestamp",
-    "record_type",
-    "error_code",
-    "error_message",
-    "parser_stage",
-    "source.ip",
-    "source.port",
-    "destination.ip",
-    "destination.port",
-    "tot.bytes",
-    "udp_checksum",
-    "udp_checksum_hex",
-)
-
-COMPACT_PROJECTABLE_MESSAGES = {"cd-2", "cd-asr", "mar"}
-COMPACT_PROJECTABLE_TYPES = {"beacon", "search", "rtqc"}
-COMPACT_PROJECTED_FIELDS = {
-    "range_nm",
-    "azimuth_degrees",
-    "altitude_feet",
-    "mode_3_code",
-    "acp",
-}
-COMPACT_ALERT_FIELDS = ("id", "name", "severity", "category", "details")
+COMPACT_ALERT_FIELDS = ("id", "name", "severity", "category", "details", "message", "event.kind", "event.category", "event.action", "event.severity", "rule.id", "rule.name", "rule.category")
 SEVERITY_RANK = {"low": 10, "medium": 20, "high": 30, "critical": 40}
 
 
@@ -101,18 +135,27 @@ class RotatingJsonlWriter:
         rotate_max_bytes: int = 536870912,
         rotation_enabled: bool = False,
         include_debug_evidence: bool = False,
+        normal_record_sample_rate: int = 100,
+        emit_parse_warning_alerts: bool = False,
+        emit_modec_altitude_missing_alerts: bool = False,
         now_fn: Optional[NowFn] = None,
     ) -> None:
         if rotate_seconds <= 0:
             raise ValueError("rotate_seconds must be > 0")
         if rotate_max_bytes <= 0:
             raise ValueError("rotate_max_bytes must be > 0")
+        if normal_record_sample_rate <= 0:
+            raise ValueError("normal_record_sample_rate must be > 0")
 
         self.active_path = Path(active_path)
         self.rotate_seconds = int(rotate_seconds)
         self.rotate_max_bytes = int(rotate_max_bytes)
         self.rotation_enabled = bool(rotation_enabled)
         self.include_debug_evidence = bool(include_debug_evidence)
+        self.normal_record_sample_rate = int(normal_record_sample_rate)
+        self.emit_parse_warning_alerts = bool(emit_parse_warning_alerts)
+        self.emit_modec_altitude_missing_alerts = bool(emit_modec_altitude_missing_alerts)
+        self._normal_event_counter = 0
         self._now_fn = now_fn if now_fn is not None else _utc_now
         self._active_started_at_utc = self._initial_active_started_at()
 
@@ -129,21 +172,30 @@ class RotatingJsonlWriter:
             rotate_max_bytes=config.rotate_max_bytes,
             rotation_enabled=config.rotation_enabled,
             include_debug_evidence=config.siem_debug_evidence,
+            normal_record_sample_rate=config.normal_record_sample_rate,
+            emit_parse_warning_alerts=config.emit_parse_warning_alerts,
+            emit_modec_altitude_missing_alerts=config.emit_modec_altitude_missing_alerts,
             now_fn=now_fn,
         )
 
     def write_record(self, record: Dict[str, object]) -> JsonlWriteResult:
-        payload = _encode_jsonl_record(
+        encoded_record = _compact_live_record(
             record,
             include_debug_evidence=self.include_debug_evidence,
+            emit_parse_warning_alerts=self.emit_parse_warning_alerts,
+            emit_modec_altitude_missing_alerts=self.emit_modec_altitude_missing_alerts,
         )
-
-        if not payload:
+        if encoded_record is None or not self._should_emit_record(record, encoded_record):
             return JsonlWriteResult(
                 active_path=str(self.active_path),
                 bytes_written=0,
                 rotated_path=None,
             )
+
+        payload = (
+            json.dumps(encoded_record, sort_keys=True, separators=(",", ":"), default=str)
+            + "\n"
+        ).encode("utf-8")
 
         rotated_path = self._rotate_if_needed(len(payload))
 
@@ -156,6 +208,25 @@ class RotatingJsonlWriter:
             bytes_written=len(payload),
             rotated_path=str(rotated_path) if rotated_path is not None else None,
         )
+
+    def _should_emit_record(
+        self,
+        source_record: Mapping[str, object],
+        encoded_record: Mapping[str, object],
+    ) -> bool:
+        if source_record.get("record_type") != "ecg_event":
+            return True
+        if _has_actionable_alerts(encoded_record):
+            return True
+        if self.normal_record_sample_rate <= 1:
+            return True
+
+        self._normal_event_counter += 1
+        if (self._normal_event_counter - 1) % self.normal_record_sample_rate == 0:
+            if isinstance(encoded_record, dict):
+                encoded_record["event.sample.rate"] = self.normal_record_sample_rate
+            return True
+        return False
 
     def rotate_now(self) -> Optional[str]:
         rotated_path = self._rotate_active_file()
@@ -245,10 +316,14 @@ def _encode_jsonl_record(
     record: Dict[str, object],
     *,
     include_debug_evidence: bool = False,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
 ) -> bytes:
     encoded_record = _compact_live_record(
         record,
         include_debug_evidence=include_debug_evidence,
+        emit_parse_warning_alerts=emit_parse_warning_alerts,
+        emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
     )
     if encoded_record is None:
         return b""
@@ -263,17 +338,23 @@ def _compact_live_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
 ) -> Optional[Dict[str, object]]:
     record_type = record.get("record_type")
     if record_type == "ecg_event":
         return _compact_live_event_record(
             record,
             include_debug_evidence=include_debug_evidence,
+            emit_parse_warning_alerts=emit_parse_warning_alerts,
+            emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
         )
     if record_type == "ecg_parse_error":
         return _compact_parse_error_record(
             record,
             include_debug_evidence=include_debug_evidence,
+            emit_parse_warning_alerts=emit_parse_warning_alerts,
+            emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
         )
     return dict(record)
 
@@ -282,96 +363,160 @@ def _compact_live_event_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
 ) -> Optional[Dict[str, object]]:
     if not _should_emit_live_event(record):
         return None
 
     normalized = _renamed_record(record)
-    event_type = normalized.get("type")
-
-    if event_type == "search":
-        if normalized.get("mode_3_code") is None:
-            normalized["mode_3_code"] = -1
-        if normalized.get("altitude_feet") is None:
-            normalized["altitude_feet"] = -1
-
-    if event_type == "rtqc":
-        for sentinel_key in (
-            "range_nm",
-            "mode_3_code",
-            "acp",
-            "azimuth_degrees",
-            "altitude_feet",
-        ):
-            if normalized.get(sentinel_key) is None:
-                normalized[sentinel_key] = -1
-
-    compact: Dict[str, object] = {}
-    for key in SIEM_EVENT_FIELDS:
-        value = normalized.get(key)
-        if value is not None:
-            compact[key] = value
-
-    _apply_alert_projection(
-        compact,
+    _apply_common_defaults(normalized, record)
+    return _project_normalized_siem_record(
+        normalized,
         record,
         include_debug_evidence=include_debug_evidence,
+        emit_parse_warning_alerts=emit_parse_warning_alerts,
+        emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
     )
-    _apply_parse_warning_summary(
-        compact,
-        record,
-        include_debug_evidence=include_debug_evidence,
-    )
-    return compact
 
 
 def _compact_parse_error_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
 ) -> Dict[str, object]:
     normalized = _renamed_record(record)
-    normalized["record_type"] = "ecg_parse_error"
-
-    compact: Dict[str, object] = {}
-    for key in SIEM_PARSE_ERROR_FIELDS:
-        value = normalized.get(key)
-        if value is not None:
-            compact[key] = value
-
-    _apply_alert_projection(
-        compact,
+    normalized["parser.validation.accepted"] = False
+    if normalized.get("parser.validation.drop_reason") is None:
+        normalized["parser.validation.drop_reason"] = record.get("error_code")
+    _apply_common_defaults(normalized, record)
+    return _project_normalized_siem_record(
+        normalized,
         record,
         include_debug_evidence=include_debug_evidence,
+        emit_parse_warning_alerts=emit_parse_warning_alerts,
+        emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
     )
+
+
+def _project_normalized_siem_record(
+    normalized: Mapping[str, object],
+    source_record: Mapping[str, object],
+    *,
+    include_debug_evidence: bool = False,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
+) -> Dict[str, object]:
+    compact: Dict[str, object] = {}
+    for key in SIEM_EVENT_FIELDS:
+        if key == "alerts":
+            continue
+        compact[key] = _clean_unavailable_value(normalized.get(key))
+
+    compact["alerts"] = _compact_alerts(
+        source_record,
+        emit_parse_warning_alerts=emit_parse_warning_alerts,
+        emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+    )
+    if include_debug_evidence:
+        compact["alerts_debug"] = _normal_alerts(source_record)
     return compact
+
+
+def _apply_common_defaults(normalized: Dict[str, object], record: Mapping[str, object]) -> None:
+    if normalized.get("event.created") is None:
+        normalized["event.created"] = normalized.get("@timestamp")
+    if normalized.get("parser.validation.warnings") is None:
+        normalized["parser.validation.warnings"] = []
+    if normalized.get("radar.subtypes") is None:
+        normalized["radar.subtypes"] = []
+    if normalized.get("hash.payload.sha256") is None and record.get("sha256_ecg_payload") is not None:
+        normalized["hash.payload.sha256"] = record.get("sha256_ecg_payload")
 
 
 def _renamed_record(record: Mapping[str, object]) -> Dict[str, object]:
     normalized: Dict[str, object] = {}
     for key, value in record.items():
         output_key = SIEM_FIELD_RENAMES.get(key, key)
+        if output_key in normalized and normalized[output_key] is not None:
+            continue
         normalized[output_key] = value
     return normalized
 
 
 def _should_emit_live_event(record: Mapping[str, object]) -> bool:
-    message = record.get("message")
-    message_type = record.get("message_type")
+    return record.get("record_type") == "ecg_event"
 
-    if message is None and message_type is None:
-        return True
 
-    if message_type == "rtqc":
-        return True
+def _compact_alerts(
+    record: Mapping[str, object],
+    *,
+    emit_parse_warning_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = False,
+) -> list[dict[str, object]]:
+    alerts = []
+    for alert in _normal_alerts(record):
+        if _is_suppressed_parse_warning_alert(
+            record,
+            alert,
+            emit_parse_warning_alerts=emit_parse_warning_alerts,
+        ):
+            continue
+        if _is_suppressed_modec_altitude_missing_alert(
+            record,
+            alert,
+            emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+        ):
+            continue
+        alerts.append(_compact_alert(alert))
+    return alerts
 
-    if message not in COMPACT_PROJECTABLE_MESSAGES:
+
+def _has_actionable_alerts(record: Mapping[str, object]) -> bool:
+    alerts = record.get("alerts")
+    return bool(alerts)
+
+
+def _is_suppressed_parse_warning_alert(
+    record: Mapping[str, object],
+    alert: Mapping[str, object],
+    *,
+    emit_parse_warning_alerts: bool = False,
+) -> bool:
+    if emit_parse_warning_alerts:
         return False
-
-    if message_type not in COMPACT_PROJECTABLE_TYPES:
+    if _clean_str(alert.get("id")) != "OAD-ECG-003":
         return False
+    accepted = record.get("parser_validation_accepted")
+    if accepted is None:
+        accepted = record.get("parser.validation.accepted")
+    return accepted is not False
 
-    return any(record.get(field) is not None for field in COMPACT_PROJECTED_FIELDS)
+
+def _is_suppressed_modec_altitude_missing_alert(
+    record: Mapping[str, object],
+    alert: Mapping[str, object],
+    *,
+    emit_modec_altitude_missing_alerts: bool = False,
+) -> bool:
+    if emit_modec_altitude_missing_alerts:
+        return False
+    if _clean_str(alert.get("id")) != "OAD-ECG-008":
+        return False
+    accepted = record.get("parser_validation_accepted")
+    if accepted is None:
+        accepted = record.get("parser.validation.accepted")
+    return accepted is not False
+
+
+def _clean_unavailable_value(value: object) -> object:
+    if value == -1 or value == "none":
+        return None
+    if value == "unknown":
+        return None
+    return value
 
 
 def _apply_alert_projection(
@@ -478,7 +623,27 @@ def _compact_alert(alert: Mapping[str, object]) -> dict[str, object]:
         value = _clean_str(alert.get(key))
         if value is not None:
             result[key] = value
+    evidence = alert.get("evidence")
+    if isinstance(evidence, Mapping):
+        compact_evidence = {
+            key: value
+            for key, value in evidence.items()
+            if _safe_evidence_item(str(key), value)
+        }
+        if compact_evidence:
+            result["evidence"] = compact_evidence
     return result
+
+
+def _safe_evidence_item(key: str, value: object) -> bool:
+    if value is None:
+        return False
+    lowered = key.lower()
+    if lowered in {"raw", "raw_payload", "payload", "packet_bytes", "frame_bytes"}:
+        return False
+    if isinstance(value, (bytes, bytearray)):
+        return False
+    return True
 
 
 def _parse_warnings_from_record(record: Mapping[str, object]) -> list[dict[str, object]]:

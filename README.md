@@ -39,12 +39,12 @@ Development-only corpus, golden-fixture, source-pack, fixture-generation, and pl
 ## Common paths
 
 - Config: /etc/oad-parser/ecg_conf.ini
-- Runtime output: /nsm/ecg/ecg-current.json
-- Audit output: /nsm/ecg/ecg-audit.jsonl
-- Status output: /nsm/ecg/ecg-status.json
+- Default SIEM handoff: /nsm/ecg/ecg-current.json
+- Optional audit output, only when explicitly enabled: /var/log/oad-parser/ecg-audit.jsonl
+- Optional local status output, only when explicitly enabled: /run/oad-parser/ecg-status.json
 - Systemd unit source in pack: deploy/systemd/ecg-parser@.service
 
-The ecg-current.json file uses a .json suffix for legacy/runtime familiarity, but it is JSON Lines: one JSON object per line.
+The ecg-current.json file uses a .json suffix for legacy/runtime familiarity, but it is JSON Lines: one JSON object per line. The default operator handoff writes only this active file under /nsm/ecg.
 
 ## Operator documentation
 

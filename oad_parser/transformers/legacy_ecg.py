@@ -55,9 +55,16 @@ LEGACY_PACKET_FIELDS = (
     "source_port",
     "destination_ip",
     "destination_port",
+    "network_bytes",
     "ip_total_length",
+    "udp_length",
+    "udp_payload_length",
     "udp_checksum",
     "udp_checksum_hex",
+    "udp_checksum_valid",
+    "ecg_frame_length_claimed",
+    "ecg_frame_length_expected",
+    "ecg_frame_length_valid",
 )
 
 UNKNOWN_CATEGORICAL_FIELDS = {
@@ -96,11 +103,12 @@ def transform_parse_result_to_legacy_records(
             timestamp_utc=timestamp_utc,
             interface=interface,
             ecg_payload=result.payload,
-            packet_metadata=result.packet_metadata or {},
+            packet_metadata=_packet_metadata_with_frame_lengths(result),
             parse_warnings=result.warnings,
             alert_config=alert_config,
         ).to_dict()
         for envelope in result.envelopes
+        if envelope.ecg_message == 1
     ]
 
 
@@ -142,7 +150,14 @@ def transform_parse_error_to_legacy_record(
 
     payload = result.payload or b""
     packet_metadata = legacy_error_fields()
-    packet_metadata.update(_packet_fields(result.packet_metadata or {}, None))
+    packet_metadata.update(_packet_fields(_packet_metadata_with_frame_lengths(result), None))
+    packet_metadata.update(
+        {
+            "parser_validation_accepted": False,
+            "parser_validation_drop_reason": result.error.code,
+            "parser_validation_warnings": [],
+        }
+    )
     apply_legacy_alert_fields(
         packet_metadata,
         evaluate_ecg_parse_error_alerts(
@@ -179,26 +194,37 @@ def legacy_fields_for_envelope(
     data words for CD-2/CD-ASR/MAR beacon/search messages.
     """
 
+    message_type = envelope.message_type
     fields: Dict[str, Any] = {
         "artcc": envelope.artcc,
         "site_id": _categorical_or_unknown(envelope.site_id),
         "ecg_message": envelope.ecg_message,
         "message_code": envelope.message_code,
         "message": _message_or_unknown(envelope.message_name),
-        "message_type": _categorical_or_unknown(envelope.message_type),
+        "message_type": _categorical_or_unknown(message_type),
+        "radar_subtypes": _radar_subtypes(envelope),
+        "rtqc_message": envelope.rtqc_message,
         "sequence": envelope.sequence,
+        "sequence_delta": None,
         "channel": envelope.channel,
+        "channel_raw_byte": envelope.channel_raw_byte,
         "router_timestamp": envelope.router_timestamp,
         "radar_timestamp": envelope.radar_timestamp,
         "message_data_length": envelope.message_data_length,
         "modec_valid": envelope.modec_valid,
+        "outer_message_name": None,
         "sha256_ecg_payload": sha256_hex(ecg_payload),
-        "fingerprint": sha256_hex(envelope.message_payload or ecg_payload),
+        "hash_payload_sha256": sha256_hex(ecg_payload),
+        "hash_message_sha256": _legacy_plot_fingerprint(ecg_payload, envelope),
+        "fingerprint": _legacy_plot_fingerprint(ecg_payload, envelope),
     }
 
     fields.update(_project_legacy_radar_fields(envelope))
 
     parsed_warnings = _parse_warning_dicts(parse_warnings) if parse_warnings else []
+    fields["parser_validation_accepted"] = True
+    fields["parser_validation_drop_reason"] = None
+    fields["parser_validation_warnings"] = parsed_warnings
     if parsed_warnings:
         fields["parse_warnings"] = parsed_warnings
 
@@ -218,10 +244,32 @@ def legacy_fields_for_envelope(
     return fields
 
 
+
+def _packet_metadata_with_frame_lengths(result: EcgEnvelopeParseResult) -> Dict[str, Any]:
+    metadata = dict(result.packet_metadata or {})
+    metadata["ecg_frame_length_claimed"] = result.frame_length_claimed
+    metadata["ecg_frame_length_expected"] = result.frame_length_expected
+    metadata["ecg_frame_length_valid"] = result.frame_length_valid
+    return metadata
+
+
+def _radar_subtypes(envelope: EcgMessageEnvelope) -> List[str]:
+    subtypes: List[str] = []
+    if envelope.beacon_message:
+        subtypes.append("beacon")
+    if envelope.search_message:
+        subtypes.append("search")
+    if envelope.rtqc_message:
+        subtypes.append("rtqc")
+    return subtypes
+
 def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]:
     fields: Dict[str, Any] = {name: None for name in LEGACY_NULL_FIELDS}
 
     if envelope.message_name not in PROJECTABLE_RADAR_MESSAGES:
+        return fields
+
+    if envelope.rtqc_message:
         return fields
 
     if envelope.message_type not in PROJECTABLE_RADAR_MESSAGE_TYPES:
@@ -229,21 +277,30 @@ def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]
 
     words = list(envelope.data_words)
 
-    if len(words) > RANGE_WORD_INDEX:
+    if len(words) > RANGE_WORD_INDEX and not _word_has_legacy_status_bit(words[RANGE_WORD_INDEX]):
         fields["range_nm"] = (
             int((words[RANGE_WORD_INDEX] & LEGACY_RANGE_WORD_MASK) >> LEGACY_RANGE_WORD_SHIFT)
             * LEGACY_RANGE_NM_SCALE
         )
 
-    if len(words) > ACP_WORD_INDEX:
+    if len(words) > ACP_WORD_INDEX and not _word_has_legacy_status_bit(words[ACP_WORD_INDEX]):
         acp = int(words[ACP_WORD_INDEX] & WORD_DATA_MASK)
         fields["acp"] = acp
         fields["azimuth_degrees"] = acp * ACP_DEGREES_PER_COUNT
 
-    if len(words) > MODE_3_WORD_INDEX and envelope.message_type == "beacon":
+    if (
+        len(words) > MODE_3_WORD_INDEX
+        and envelope.message_type == "beacon"
+        and not _word_has_legacy_status_bit(words[MODE_3_WORD_INDEX])
+    ):
         fields["mode_3_code"] = int(oct(int(words[MODE_3_WORD_INDEX] & WORD_DATA_MASK))[2:])
 
-    if envelope.message_type == "beacon" and envelope.modec_valid and len(words) > 6:
+    if (
+        envelope.message_type == "beacon"
+        and envelope.modec_valid
+        and len(words) > 6
+        and not _word_has_legacy_status_bit(words[6])
+    ):
         altitude_word = int(words[6] & LEGACY_ALTITUDE_WORD_MASK)
         altitude_feet = altitude_word * ALTITUDE_FEET_PER_COUNT
         if words[6] & ALTITUDE_SIGN_MASK:
@@ -252,6 +309,16 @@ def _project_legacy_radar_fields(envelope: EcgMessageEnvelope) -> Dict[str, Any]
 
     return fields
 
+
+
+
+def _legacy_plot_fingerprint(ecg_payload: bytes, envelope: EcgMessageEnvelope) -> str:
+    return sha256_hex(ecg_payload[:16] + (envelope.message_payload or b""))
+
+
+def _word_has_legacy_status_bit(word: int) -> bool:
+    high_byte = (int(word) >> 8) & 0xFF
+    return bool(high_byte & 0b00110000)
 
 
 def _parse_warning_dicts(
@@ -277,12 +344,19 @@ def legacy_error_fields() -> Dict[str, Any]:
         "message_code": None,
         "message": None,
         "message_type": "unknown",
+        "radar_subtypes": [],
         "sequence": None,
+        "sequence_delta": None,
         "channel": None,
+        "channel_raw_byte": None,
         "router_timestamp": None,
         "radar_timestamp": None,
         "message_data_length": None,
         "modec_valid": None,
+        "outer_message_name": None,
+        "hash_payload_sha256": None,
+        "hash_message_sha256": None,
+        "fingerprint": None,
     }
 
     for name in LEGACY_NULL_FIELDS:
