@@ -1,4 +1,4 @@
-# Python
+# Python caches and build artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -6,8 +6,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
-dist/
-build/
 *.egg-info/
 
 # Virtual environments
@@ -15,13 +13,27 @@ build/
 venv/
 .venv-*/
 
-# Local artifacts
+# Build, package, and validation outputs
+dist/
+build/
+dist/source-packs/
+reports/
+
+# OAD parser local/sensitive artifacts
 *.pcap
 *.pcapng
+*.cap
+*.bin
+*.payload
+*.ecg
+*.jsonl
+*.log
+*.tmp
 *.rpm
 *.wav
-*.tmp
-*.log
+corpus-report.json
+corpus-summary.txt
+demo.sh
 
 # Private samples
 samples/private/*
@@ -31,37 +43,3 @@ samples/private/*
 .DS_Store
 Thumbs.db
 *.swp
-
-
-# Generated source packs
-dist/source-packs/
-
-# OAD parser local/sensitive artifacts
-__pycache__/
-*.pyc
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
-dist/
-build/
-*.pcap
-*.pcapng
-*.cap
-*.bin
-*.payload
-*.ecg
-*.log
-*.tmp
-corpus-report.json
-corpus-summary.txt
-demo.sh
-samples/private/
-
-# Python local environments and caches
-
-# Local operator demo scripts
-
-# Generated verification evidence
-reports/

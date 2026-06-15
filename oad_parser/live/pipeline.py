@@ -25,6 +25,17 @@ from oad_parser.parsers.ecg import (
 from oad_parser.transformers.legacy_ecg import transform_parse_result_to_legacy_records
 
 
+DEFAULT_MODE1_OPERATIONAL_ALERT_CONFIG = EcgAlertConfig(
+    duplicate_payload_window_seconds=1.0,
+    duplicate_payload_threshold=6,
+    max_sequence_delta=None,
+    legacy_sequence_delta_min_abs=15,
+    legacy_sequence_delta_max_abs=240,
+    max_radar_time_delta_seconds=5.0,
+    max_router_time_delta_seconds=5.0,
+)
+
+
 @dataclass
 class LiveSequenceState:
     """Per-feed state for duplicate collapse plus sequence/timestamp modeling."""
@@ -50,19 +61,25 @@ class LiveSequenceState:
         *,
         alert_config: EcgAlertConfig | None = None,
     ) -> None:
+        effective_alert_config = alert_config
         for record in records:
             if record.get("record_type") != "ecg_event":
                 continue
 
             existing_alerts = list(record.get("alerts") or [])
-            duplicate_collapsed = self._apply_duplicate_alert(record, existing_alerts, alert_config)
+            duplicate_collapsed = self._apply_duplicate_alert(
+                record,
+                existing_alerts,
+                effective_alert_config,
+            )
             if duplicate_collapsed:
                 apply_legacy_alert_fields(record, existing_alerts)
                 continue
 
-            self._annotate_sequence(record, existing_alerts, alert_config)
-            self._annotate_time(record, existing_alerts, alert_config)
+            self._annotate_sequence(record, existing_alerts, effective_alert_config)
+            self._annotate_time(record, existing_alerts, effective_alert_config)
             apply_legacy_alert_fields(record, existing_alerts)
+
 
     def _apply_duplicate_alert(
         self,
@@ -120,28 +137,59 @@ class LiveSequenceState:
         sequence = record.get("sequence")
         if not isinstance(sequence, int):
             record["sequence_delta"] = None
+            record["sequence_delta_raw"] = None
             return
 
         key = _sequence_key(record)
         previous = self.last_sequence_by_key.get(key)
-        delta = None if previous is None else (sequence - previous) % 256
-        record["sequence_delta"] = delta
         self.last_sequence_by_key[key] = sequence
 
-        if previous is None or alert_config is None or alert_config.max_sequence_delta is None:
+        if previous is None:
+            record["sequence_delta"] = None
+            record["sequence_delta_raw"] = None
             return
-        if delta is not None and delta > alert_config.max_sequence_delta:
+
+        modulo_delta = (sequence - previous) % 256
+        raw_delta = sequence - previous
+        record["sequence_delta"] = modulo_delta
+        record["sequence_delta_raw"] = raw_delta
+
+        if alert_config is None:
+            return
+
+        legacy_min = alert_config.legacy_sequence_delta_min_abs
+        legacy_max = alert_config.legacy_sequence_delta_max_abs
+        should_alert = False
+        threshold_evidence: dict[str, Any] = {}
+
+        if legacy_min is not None and legacy_max is not None:
+            raw_abs = abs(raw_delta)
+            should_alert = legacy_min <= raw_abs <= legacy_max
+            threshold_evidence = {
+                "legacy_sequence_delta_min_abs": legacy_min,
+                "legacy_sequence_delta_max_abs": legacy_max,
+                "threshold_mode": "legacy_signed_raw_delta",
+            }
+        elif alert_config.max_sequence_delta is not None:
+            should_alert = modulo_delta > alert_config.max_sequence_delta
+            threshold_evidence = {
+                "threshold": alert_config.max_sequence_delta,
+                "threshold_mode": "modulo_delta",
+            }
+
+        if should_alert:
             alerts.append(
                 make_alert(
                     "ECG-CD2-005",
-                    "Modulo-256 message sequence gap exceeded the configured threshold after duplicate collapse.",
+                    "Sequence delta between plots is too large.",
                     {
                         "previous_sequence": previous,
                         "current_sequence": sequence,
-                        "sequence_delta": delta,
-                        "threshold": alert_config.max_sequence_delta,
+                        "sequence_delta": modulo_delta,
+                        "sequence_delta_raw": raw_delta,
                         "source_site_channel_tuple": _feed_evidence(record),
-                    },
+                    }
+                    | threshold_evidence,
                     scope="stateful",
                 )
             )
@@ -270,7 +318,10 @@ def process_classified_live_frame(
     )
 
     if sequence_state is not None:
-        sequence_state.annotate_records(records, alert_config=alert_config)
+        sequence_state.annotate_records(
+            records,
+            alert_config=alert_config,
+        )
 
     if metrics is not None:
         _update_metrics(parse_result, records, metrics)

@@ -12,7 +12,7 @@ import importlib.util
 from dataclasses import replace
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from oad_parser import __version__
@@ -26,6 +26,7 @@ from oad_parser.ingest.live_socket import iter_live_capture_frames_from_config, 
 from oad_parser.ingest.pcap import iter_pcap_packets
 from oad_parser.inspect import inspect_pcap
 from oad_parser.live.audit import LiveObservabilityWriters
+from oad_parser.live.records import LiveCaptureFrame
 from oad_parser.live.service import run_live_service
 from oad_parser.live.storage import LiveStoragePolicy
 from oad_parser.live.writer import RotatingJsonlWriter
@@ -204,6 +205,29 @@ def build_parser() -> argparse.ArgumentParser:
     parse_pcap.add_argument("input", help="Input pcap path.")
     parse_pcap.add_argument("--interface", default=None, help="Observer interface name.")
 
+    replay_pcap_live = subparsers.add_parser(
+        "replay-pcap-live",
+        help="Replay a pcap through the live Mode 1 JSONL pipeline.",
+    )
+    replay_pcap_live.add_argument("input", help="Input pcap path.")
+    replay_pcap_live.add_argument("--output", default=None, help="Live Mode 1 JSONL output path.")
+    replay_pcap_live.add_argument(
+        "--config",
+        default=None,
+        help="Optional live parser INI config path.",
+    )
+    replay_pcap_live.add_argument(
+        "--interface",
+        default=None,
+        help="Observer interface name. Overrides config.",
+    )
+    replay_pcap_live.add_argument(
+        "--max-frames",
+        type=int,
+        default=None,
+        help="Stop after N packets for bounded replay.",
+    )
+
     capture = subparsers.add_parser("capture", help="Capture from a Linux interface and emit JSONL.")
     add_output_args(capture)
     add_detector_args(capture)
@@ -339,11 +363,26 @@ def packet_timestamp_iso(
     return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
 
+def packet_timestamp_datetime(
+    timestamp_seconds: int,
+    timestamp_fraction: int,
+    timestamp_fraction_resolution: int = 1_000_000,
+) -> datetime:
+    if timestamp_fraction_resolution <= 0:
+        raise ValueError("timestamp_fraction_resolution must be greater than zero")
+
+    microseconds = (timestamp_fraction * 1_000_000) // timestamp_fraction_resolution
+    return datetime.fromtimestamp(timestamp_seconds, tz=timezone.utc) + timedelta(microseconds=microseconds)
+
+
 def resolved_live_config_from_args(args: argparse.Namespace) -> LiveParserConfig:
     config = load_live_parser_config(getattr(args, "config", None))
 
+    if getattr(args, "output", None) is not None:
+        config = replace(config, output_json_file=args.output)
+
     if getattr(args, "interface", None) is not None:
-        config.interface = args.interface.strip()
+        config = replace(config, interface=args.interface.strip())
 
     if not config.interface:
         raise ValueError("live interface is required; pass --interface or set [Live] interface in config")
@@ -352,6 +391,17 @@ def resolved_live_config_from_args(args: argparse.Namespace) -> LiveParserConfig
         raise ValueError("live max_frames must be >= 0")
 
     return config
+
+
+def mode1_replay_live_config_from_args(args: argparse.Namespace) -> LiveParserConfig:
+    config = resolved_live_config_from_args(args)
+    return replace(
+        config,
+        output_status=False,
+        normal_record_sample_rate=1,
+        emit_parse_warning_alerts=True,
+        emit_modec_altitude_missing_alerts=True,
+    )
 
 
 def resolved_config_from_args(args: argparse.Namespace) -> ParserConfig:
@@ -502,6 +552,60 @@ def run_parse_pcap(args: argparse.Namespace) -> int:
     return 0
 
 
+def iter_pcap_live_capture_frames(
+    input_path: str | Path,
+    *,
+    interface: str,
+):
+    for sequence_number, packet in enumerate(iter_pcap_packets(input_path), start=1):
+        yield LiveCaptureFrame(
+            frame_bytes=packet.data,
+            interface=interface,
+            capture_time_utc=packet_timestamp_datetime(
+                packet.timestamp_seconds,
+                packet.timestamp_fraction,
+                packet.timestamp_fraction_resolution,
+            ),
+            frame_length=len(packet.data),
+            sequence_number=sequence_number,
+        )
+
+
+def run_replay_pcap_live(args: argparse.Namespace) -> int:
+    config = mode1_replay_live_config_from_args(args)
+    writer = RotatingJsonlWriter.from_config(config)
+    capture_frames = iter_pcap_live_capture_frames(
+        args.input,
+        interface=config.interface,
+    )
+    result = run_live_service(
+        config,
+        capture_frames,
+        record_sink=writer.write_record,
+        audit_sink=None,
+        status_sink=None,
+        storage_policy=None,
+        max_frames=args.max_frames,
+    )
+    writer.write_accounting_snapshot(reason=result.stopped_reason)
+
+    print(
+        "replay-pcap-live complete: reason=%s frames=%d records=%d interface=%s output=%s"
+        % (
+            result.stopped_reason,
+            result.frames_processed,
+            result.records_emitted,
+            config.interface,
+            config.output_json_file,
+        )
+    )
+
+    if result.last_error:
+        print("replay-pcap-live warning: %s" % result.last_error)
+
+    return 0
+
+
 def run_live(args: argparse.Namespace) -> int:
     try:
         config = load_live_parser_config(args.config)
@@ -526,6 +630,7 @@ def run_live(args: argparse.Namespace) -> int:
             storage_policy=storage_policy,
             max_frames=args.max_frames,
         )
+        writer.write_accounting_snapshot(reason=result.stopped_reason)
 
         print(
             "live service complete: reason=%s frames=%d records=%d interface=%s frames_processed=%d records_emitted=%d"
@@ -865,6 +970,8 @@ def main() -> int:
             return run_inspect_pcap(args)
         if args.command == "parse-pcap":
             return run_parse_pcap(args)
+        if args.command == "replay-pcap-live":
+            return run_replay_pcap_live(args)
         if args.command == "capture":
             return run_capture(args)
         if args.command == "live":

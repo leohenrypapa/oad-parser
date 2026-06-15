@@ -29,6 +29,49 @@ ALERT_DEFINITIONS = {
     "OAD-ECG-008": ("Mode C valid but altitude missing", "medium", "message_semantics"),
 }
 
+LEGACY_OPERATOR_ALERT_TAXONOMY = {
+    # Unknown-site category: source/site/channel authorization and parser/frame integrity
+    # are grouped here so the operator sees one legacy site/feed-integrity family.
+    "ECG-CD2-001": {
+        "operator.category": "unknown_site",
+        "operator.alert": "New unknown site discovered.",
+        "operator.subtype": "unauthorized_source_site_channel_tuple",
+    },
+    "ECG-CD2-002": {
+        "operator.category": "unknown_site",
+        "operator.alert": "New unknown site discovered.",
+        "operator.subtype": "malformed_ecg_cd2_frame_length",
+    },
+    "ECG-CD2-003": {
+        "operator.category": "unknown_site",
+        "operator.alert": "New unknown site discovered.",
+        "operator.subtype": "udp_checksum_bad_or_zero_unexpected",
+    },
+    "ECG-CD2-007": {
+        "operator.category": "unknown_site",
+        "operator.alert": "New unknown site discovered.",
+        "operator.subtype": "site_artcc_channel_change",
+    },
+    # Legacy duplicate-plot category. Normal duplicate packet/output suppression
+    # must remain accounting-only and must not become this alert.
+    "ECG-CD2-004": {
+        "operator.category": "duplicate_plot",
+        "operator.alert": "Duplicate plot found.",
+        "operator.subtype": "duplicate_payload_burst_or_replay",
+    },
+    # Legacy sequence/time categories.
+    "ECG-CD2-005": {
+        "operator.category": "sequence_delta",
+        "operator.alert": "Sequence delta between plots is too large.",
+        "operator.subtype": "sequence_gap_after_duplicate_collapse",
+    },
+    "ECG-CD2-006": {
+        "operator.category": "time_delta",
+        "operator.alert": "Time delta between plots is too large.",
+        "operator.subtype": "timestamp_gap_or_stale_replay",
+    },
+}
+
 PROJECTABLE_RADAR_MESSAGES = {"cd-2", "cd-asr", "mar"}
 PROJECTABLE_RADAR_MESSAGE_TYPES = {"beacon", "search"}
 
@@ -54,10 +97,13 @@ class EcgAlertConfig:
     raw_azimuth_max: int | None = None
     allowed_source_tuples: frozenset[str] = frozenset()
     allowed_site_artcc_channel_tuples: frozenset[str] = frozenset()
+    emit_unknown_site_alerts: bool = True
     udp_zero_checksum_allowed: bool = True
     duplicate_payload_window_seconds: float | None = None
     duplicate_payload_threshold: int | None = None
     max_sequence_delta: int | None = None
+    legacy_sequence_delta_min_abs: int | None = None
+    legacy_sequence_delta_max_abs: int | None = None
     max_radar_time_delta_seconds: float | None = None
     max_router_time_delta_seconds: float | None = None
 
@@ -93,10 +139,13 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         "raw_azimuth_max",
         "allowed_source_tuples",
         "allowed_site_artcc_channel_tuples",
+        "emit_unknown_site_alerts",
         "udp_zero_checksum_allowed",
         "duplicate_payload_window_seconds",
         "duplicate_payload_threshold",
         "max_sequence_delta",
+        "legacy_sequence_delta_min_abs",
+        "legacy_sequence_delta_max_abs",
         "max_radar_time_delta_seconds",
         "max_router_time_delta_seconds",
     }
@@ -136,6 +185,26 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
     if max_sequence_delta is not None and not 0 <= max_sequence_delta <= 255:
         raise ValueError("max_sequence_delta must be between 0 and 255")
 
+    legacy_sequence_delta_min_abs = _optional_int(
+        data.get("legacy_sequence_delta_min_abs"),
+        "legacy_sequence_delta_min_abs",
+    )
+    if legacy_sequence_delta_min_abs is not None and not 0 <= legacy_sequence_delta_min_abs <= 255:
+        raise ValueError("legacy_sequence_delta_min_abs must be between 0 and 255")
+
+    legacy_sequence_delta_max_abs = _optional_int(
+        data.get("legacy_sequence_delta_max_abs"),
+        "legacy_sequence_delta_max_abs",
+    )
+    if legacy_sequence_delta_max_abs is not None and not 0 <= legacy_sequence_delta_max_abs <= 255:
+        raise ValueError("legacy_sequence_delta_max_abs must be between 0 and 255")
+    if (
+        legacy_sequence_delta_min_abs is not None
+        and legacy_sequence_delta_max_abs is not None
+        and legacy_sequence_delta_min_abs > legacy_sequence_delta_max_abs
+    ):
+        raise ValueError("legacy_sequence_delta_min_abs must be <= legacy_sequence_delta_max_abs")
+
     max_radar_time_delta_seconds = _optional_float(data.get("max_radar_time_delta_seconds"), "max_radar_time_delta_seconds")
     if max_radar_time_delta_seconds is not None and max_radar_time_delta_seconds < 0:
         raise ValueError("max_radar_time_delta_seconds must be >= 0")
@@ -165,6 +234,10 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
             data.get("allowed_site_artcc_channel_tuples"),
             "allowed_site_artcc_channel_tuples",
         ),
+        emit_unknown_site_alerts=_optional_bool(
+            data.get("emit_unknown_site_alerts", True),
+            "emit_unknown_site_alerts",
+        ),
         udp_zero_checksum_allowed=_optional_bool(
             data.get("udp_zero_checksum_allowed", True),
             "udp_zero_checksum_allowed",
@@ -172,6 +245,8 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         duplicate_payload_window_seconds=duplicate_payload_window_seconds,
         duplicate_payload_threshold=duplicate_payload_threshold,
         max_sequence_delta=max_sequence_delta,
+        legacy_sequence_delta_min_abs=legacy_sequence_delta_min_abs,
+        legacy_sequence_delta_max_abs=legacy_sequence_delta_max_abs,
         max_radar_time_delta_seconds=max_radar_time_delta_seconds,
         max_router_time_delta_seconds=max_router_time_delta_seconds,
     )
@@ -193,31 +268,13 @@ def evaluate_ecg_record_alerts(
 
     warning_dicts = [_warning_to_dict(item) for item in parse_warnings]
     if warning_dicts:
-        alerts.append(
-            make_alert(
-                "OAD-ECG-003",
-                "ECG parse warnings were emitted.",
-                {"parse_warnings": warning_dicts},
-            )
-        )
+        # Parser warnings stay on parser.validation.warnings. Unknown or unmapped
+        # message codes are metadata, not operator alerts.
+        pass
 
-    if message_type == "unknown":
-        alerts.append(make_alert("OAD-ECG-005", "Unknown ECG message type.", {"message_type": message_type}))
-
+    # Unknown ECG/CD2 message codes and missing altitude are retained as fields
+    # and validation/decoder metadata. They are not operator alerts by themselves.
     alerts.extend(_missing_required_word_alerts(record, data_words))
-
-    if (
-        message_type == "beacon"
-        and record.get("modec_valid") is True
-        and record.get("altitude_feet") is None
-    ):
-        alerts.append(
-            make_alert(
-                "OAD-ECG-008",
-                "Mode C is valid but altitude could not be projected.",
-                {"modec_valid": True, "altitude_feet": None, "data_word_count": len(data_words)},
-            )
-        )
 
     alerts.extend(_checksum_alerts(record, config))
 
@@ -287,6 +344,9 @@ def _configured_alerts(
 ) -> list[dict[str, Any]]:
     alerts: list[dict[str, Any]] = []
 
+    if not config.emit_unknown_site_alerts:
+        return alerts
+
     source_tuple = _source_tuple_key(record)
     if config.allowed_source_tuples and source_tuple not in config.allowed_source_tuples:
         alerts.append(
@@ -320,9 +380,14 @@ def _configured_alerts(
     if allowed_types and message_type not in allowed_types:
         alerts.append(
             make_alert(
-                "OAD-ECG-006",
-                "ECG message type is not allowed by explicit alert config.",
-                {"site_id": site_id, "message_type": message_type, "allowed_message_types": sorted(allowed_types)},
+                "ECG-CD2-007",
+                "ECG message type is not allowed by explicit site/feed/message baseline.",
+                _site_tuple_evidence(record, "message_type_miss")
+                | {
+                    "message_type": message_type,
+                    "allowed_message_types": sorted(allowed_types),
+                    "operator.subtype.detail": "unexpected_message_type",
+                },
             )
         )
 
@@ -536,12 +601,12 @@ def make_alert(
     scope: str = "stateless",
 ) -> dict[str, Any]:
     name, severity, category = ALERT_DEFINITIONS[alert_id]
-    return {
+    operator = LEGACY_OPERATOR_ALERT_TAXONOMY.get(alert_id, {})
+    alert = {
         "id": alert_id,
         "name": name,
         "severity": severity,
         "category": category,
-        "scope": scope,
         "details": details,
         "message": details,
         "event.kind": "alert",
@@ -553,6 +618,8 @@ def make_alert(
         "rule.category": category,
         "evidence": dict(evidence),
     }
+    alert.update(operator)
+    return alert
 
 
 def _deduplicate_alerts(alerts: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:

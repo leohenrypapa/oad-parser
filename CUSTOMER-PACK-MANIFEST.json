@@ -53,12 +53,12 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-15T15:45:59Z",
+  "generated_at_utc": "2026-06-15T19:41:23Z",
   "included_files": [
     {
       "path": ".gitignore",
-      "sha256": "ec175848141ed44a4f3e6259c0cf7f81004cbd05584ee079ab384acdea6c21b8",
-      "size_bytes": 730
+      "sha256": "0249f80c6c9d439b584eb29de6eb420053cc858f7a371453d4ba5e6f7a300bc9",
+      "size_bytes": 524
     },
     {
       "path": "CHANGELOG.md",
@@ -87,8 +87,8 @@
     },
     {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "3f1c41d7e689f717a1ceed4e882faa24b982a1e1973b581bbbc77ee20f8f153d",
-      "size_bytes": 1429
+      "sha256": "7e7acbde0532c816a7a297bb196dfb4f5d050aea65bf3abfd9f0188abdd5ed36",
+      "size_bytes": 1552
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -112,13 +112,13 @@
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "5d5211fcf97e533106231dc5ed3788ab9fe67ab60800c5d0131b81487a5ddb21",
-      "size_bytes": 6575
+      "sha256": "836d43f72eb941ab9556726acf38e93aec910ee82bb37c76e6467f42919ba128",
+      "size_bytes": 8119
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "8f47bb345b65d21116232d14195f95e7c2db47b5f559c5e4a25684376d0eb5a9",
-      "size_bytes": 7352
+      "sha256": "e6b4f56fe48f827b82a8f342bef909412da21a9a49838a6d6e89aac692b1f4e2",
+      "size_bytes": 8930
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
@@ -152,8 +152,8 @@
     },
     {
       "path": "oad_parser/cli.py",
-      "sha256": "7104de9737e3c4545ccd82d12356dc4bdb93ac4fa9df456ff127be4a29d1ffc6",
-      "size_bytes": 32627
+      "sha256": "ecb6446dcd16c0e774cacda67346a97a892a5cd9b62c4502fce5b3cc84048115",
+      "size_bytes": 36149
     },
     {
       "path": "oad_parser/compare.py",
@@ -162,8 +162,8 @@
     },
     {
       "path": "oad_parser/config.py",
-      "sha256": "5532523862cc7c03473c1d2e6cbe81dc2236c38e77940be2b7e2b64e03737ae4",
-      "size_bytes": 16656
+      "sha256": "895d974fa1d26d440449e49c1dfe5a7485647e061be3d8db6491a338048f29c0",
+      "size_bytes": 17895
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -222,8 +222,8 @@
     },
     {
       "path": "oad_parser/ingest/pcap.py",
-      "sha256": "0c348c631fe0ae2731691680650710f9c38790c31c0ba13d7151280fce0840c6",
-      "size_bytes": 2554
+      "sha256": "834d165f4d3d6a8f39b29e754f47cf55e74510193ec64e23fffd7dc98fa45f6f",
+      "size_bytes": 2704
     },
     {
       "path": "oad_parser/ingest/raw_bytes.py",
@@ -242,8 +242,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "1ab49cbef5ebf24e65869ce75b2bce1bf35b38e27f6c1b16034061b01e27ac5b",
-      "size_bytes": 25311
+      "sha256": "444d4ef674ef81d331f9ce71fa9f473575e79a35c07589ef49be0f21f5ee6dcf",
+      "size_bytes": 28514
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -262,8 +262,8 @@
     },
     {
       "path": "oad_parser/live/pipeline.py",
-      "sha256": "5c93ac476c26c8a13e05a23c042d9fa8365b29f429e32a647da2052898b35bc0",
-      "size_bytes": 13106
+      "sha256": "e07638a59e13b4c417b61d270bc4a5150c33456a1c265769eeda36ac8302b3d3",
+      "size_bytes": 14634
     },
     {
       "path": "oad_parser/live/records.py",
@@ -282,8 +282,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "700151c691f6b17b33c9d0545536e26c7b25b71b4c46f76592abf39dbeaf28a3",
-      "size_bytes": 23377
+      "sha256": "644ff120aa6d071719aaa6ad93830afbb4745f0d0b50b7a1eee94b6605df2026",
+      "size_bytes": 43107
     },
     {
       "path": "oad_parser/models.py",
@@ -385,7 +385,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-15T15:45:59Z",
+    "generated_at_utc": "2026-06-15T19:41:23Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "8afee16e3ccd74ace5c5cc044e88630cf4b4107689eb70f27b953f5ce22e151d",

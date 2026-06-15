@@ -197,3 +197,26 @@ The default live ECG operator handoff is a single newline-delimited JSON file at
 Marker: 2026-06-12 ECG output-volume tuning update
 
 For validated `eno4` deployment, keep boot persistence disabled until the operator and SIEM owner accept sampled output. The second-patch evidence run intentionally stopped `ecg-parser@eno4.service` after collection to freeze evidence.
+
+
+## Mode 1 analysis policy
+
+For early operator analysis, OAD uses radar.oad.new on eno2 with normal_record_sample_rate=1, emit_parse_warning_alerts=True, and emit_modec_altitude_missing_alerts=True. The only intentional output suppression allowed in this mode is exact duplicate suppression, which must be reflected by parser.duplicate.* and parser.accounting.* fields. Production sampling and non-actionable-wrapper suppression are deferred until analysts approve the policy.
+
+For offline PCAP replay into the same duplicate-suppressed Mode 1 JSONL shape, use:
+
+    python -m oad_parser replay-pcap-live INPUT.pcap --output mode1-replay.jsonl --interface eno2
+
+Add `--max-frames N` for bounded smoke replay. This command streams the PCAP through the live classifier, live pipeline, and live JSONL writer, then appends a parser_accounting snapshot. It does not run live capture, systemd, storage pruning, or writer blocking.
+
+## Sensor1 current service map - 2026-06-12
+
+| Service | Current role | Expected state during OAD Mode 1 |
+|---|---|---|
+| ecg-parser@eno2.service | OAD live parser on current site interface | active |
+| ecg-parser@eno4.service | historical OAD instance | inactive |
+| ecg.service | legacy parser | unchanged unless operator approves side-by-side comparison |
+
+Boot persistence remains disabled unless the operator explicitly approves enabling services.
+
+Legacy was found running /usr/bin/python3 /usr/bin/ecg.py eno4. Therefore, legacy is not a valid side-by-side comparator for current eno2 traffic unless the site approves changing legacy to eno2.

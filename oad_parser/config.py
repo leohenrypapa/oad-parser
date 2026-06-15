@@ -23,14 +23,18 @@ DEFAULT_LIVE_AUDIT_FILE = "/var/log/oad-parser/ecg-audit.jsonl"
 DEFAULT_LIVE_STATUS_FILE = "/run/oad-parser/ecg-status.json"
 DEFAULT_LIVE_INTERFACE = "eno1"
 DEFAULT_LIVE_MODE = "legacy_jsonl"
+DEFAULT_LIVE_DATA_STREAM_TYPE = "logs"
+DEFAULT_LIVE_DATA_STREAM_DATASET = "radar.oad.new"
+DEFAULT_LIVE_EVENT_DATASET = "radar.oad.new"
+DEFAULT_LIVE_SERVICE_NAME = "oad-ecg-parser"
 DEFAULT_LIVE_ROTATE_SECONDS = 900
 DEFAULT_LIVE_ROTATE_MAX_BYTES = 536870912
 DEFAULT_LIVE_ROTATION_ENABLED = False
 DEFAULT_LIVE_OUTPUT_STATUS = False
 DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE = False
-DEFAULT_LIVE_NORMAL_RECORD_SAMPLE_RATE = 1000
-DEFAULT_LIVE_EMIT_PARSE_WARNING_ALERTS = False
-DEFAULT_LIVE_EMIT_MODEC_ALTITUDE_MISSING_ALERTS = False
+DEFAULT_LIVE_NORMAL_RECORD_SAMPLE_RATE = 1
+DEFAULT_LIVE_EMIT_PARSE_WARNING_ALERTS = True
+DEFAULT_LIVE_EMIT_MODEC_ALTITUDE_MISSING_ALERTS = True
 DEFAULT_LIVE_RECEIVE_BUFFER_BYTES = 134217728
 DEFAULT_LIVE_STATUS_INTERVAL_SECONDS = 60
 DEFAULT_LIVE_METRICS_INTERVAL_SECONDS = 60
@@ -80,6 +84,10 @@ class LiveParserConfig:
 
     interface: str = DEFAULT_LIVE_INTERFACE
     mode: str = DEFAULT_LIVE_MODE
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME
     rotation_enabled: bool = DEFAULT_LIVE_ROTATION_ENABLED
     rotate_seconds: int = DEFAULT_LIVE_ROTATE_SECONDS
     rotate_max_bytes: int = DEFAULT_LIVE_ROTATE_MAX_BYTES
@@ -325,6 +333,12 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
         config.audit_file = _get_string(parser, "Audit", "audit_file", config.audit_file)
         config.status_file = _get_string(parser, "Audit", "status_file", config.status_file)
 
+    if parser.has_section("SIEM"):
+        config.data_stream_type = _get_string(parser, "SIEM", "data_stream_type", config.data_stream_type)
+        config.data_stream_dataset = _get_string(parser, "SIEM", "data_stream_dataset", config.data_stream_dataset)
+        config.event_dataset = _get_string(parser, "SIEM", "event_dataset", config.event_dataset)
+        config.service_name = _get_string(parser, "SIEM", "service_name", config.service_name)
+
     if parser.has_section("Alerts"):
         config.alert_config_path = _optional_string(
             parser.get("Alerts", "alert_config_path", fallback=None)
@@ -372,6 +386,18 @@ def _validate_live_parser_config(config: LiveParserConfig) -> None:
 
     if config.mode != "legacy_jsonl":
         raise ValueError("live mode must be legacy_jsonl for MVP")
+
+    if not config.data_stream_type:
+        raise ValueError("live data_stream_type is required")
+
+    if not config.data_stream_dataset:
+        raise ValueError("live data_stream_dataset is required")
+
+    if not config.event_dataset:
+        raise ValueError("live event_dataset is required")
+
+    if not config.service_name:
+        raise ValueError("live service_name is required")
 
     if config.rotate_seconds < 1:
         raise ValueError("live rotate_seconds must be >= 1")

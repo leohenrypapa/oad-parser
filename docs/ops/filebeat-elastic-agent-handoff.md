@@ -181,3 +181,32 @@ emit_modec_altitude_missing_alerts = False
 ```
 
 `/nsm/ecg/ecg-current.json` remains JSON Lines. Normal accepted traffic is sampled. Parser warnings remain in `parser.validation.warnings`, but accepted parse warnings and accepted Mode C altitude-missing conditions are not emitted as SIEM alert objects by default.
+
+
+## 2026-06-12 operator comparison dataset update
+
+Legacy ECG output remains routed by the SIEM owner to dataset radar.oad. OAD ECG output must identify itself as dataset radar.oad.new using data_stream.dataset and event.dataset so operators can compare the two streams without mixing records. The parser-owned default event file remains /nsm/ecg/ecg-current.json. SIEM routing, namespace, and index or data-stream creation remain SIEM-owner responsibilities.
+
+
+## Mode 1 analysis policy
+
+For early operator analysis, OAD uses radar.oad.new on eno2 with normal_record_sample_rate=1, emit_parse_warning_alerts=True, and emit_modec_altitude_missing_alerts=True. The only intentional output suppression allowed in this mode is exact duplicate suppression, which must be reflected by parser.duplicate.* and parser.accounting.* fields. Production sampling and non-actionable-wrapper suppression are deferred until analysts approve the policy.
+
+## Sensor1 dataset split - 2026-06-12
+
+Sensor1 uses a dataset split so operators can compare legacy and OAD output without mixing records.
+
+| Source | Dataset |
+|---|---|
+| Legacy parser | radar.oad |
+| OAD parser | radar.oad.new |
+
+OAD records must include:
+
+- data_stream.type = logs
+- data_stream.dataset = radar.oad.new
+- event.dataset = radar.oad.new
+- service.name = oad-ecg-parser
+- observer.ingress.interface = eno2
+
+Target-side JSON validation proves OAD emits these fields. It does not prove Elastic or Fleet ingestion. SIEM-side confirmation must be performed by an operator or SIEM engineer.

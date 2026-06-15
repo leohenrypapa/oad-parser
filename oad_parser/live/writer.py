@@ -4,12 +4,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
+import sqlite3
+import tempfile
 from typing import Callable, Dict, Mapping, Optional, Sequence
 
-from oad_parser.config import LiveParserConfig
+from oad_parser.config import (
+    DEFAULT_LIVE_DATA_STREAM_DATASET,
+    DEFAULT_LIVE_DATA_STREAM_TYPE,
+    DEFAULT_LIVE_EVENT_DATASET,
+    DEFAULT_LIVE_SERVICE_NAME,
+    LiveParserConfig,
+)
 
 
 NowFn = Callable[[], datetime]
@@ -24,21 +33,90 @@ class JsonlWriteResult:
     rotated_path: Optional[str] = None
 
 
+class _DuplicateKeyAccounting:
+    """Exact duplicate-key counts with bounded Python memory.
+
+    The SQLite table holds per-key counts on disk. The live writer keeps only
+    scalar totals in memory, so event emission is immediate and does not buffer
+    already-emitted records while still supporting exact duplicate suppression.
+    """
+
+    def __init__(self) -> None:
+        self._tempdir = tempfile.TemporaryDirectory(prefix="oad-duplicate-keys-")
+        self._db_path = Path(self._tempdir.name) / "keys.sqlite"
+        self._connection = sqlite3.connect(str(self._db_path), isolation_level=None)
+        self._connection.execute("pragma synchronous=off")
+        self._connection.execute("pragma journal_mode=memory")
+        self._connection.execute(
+            "create table duplicate_key_counts (key text primary key, count integer not null)"
+        )
+        self.unique_keys_seen = 0
+        self.keys_with_duplicates = 0
+        self.max_key_count = 0
+        self.observations = 0
+        self.last_key: Optional[str] = None
+        self.last_key_count = 0
+
+    def register(self, duplicate_key: str) -> int:
+        row = self._connection.execute(
+            "select count from duplicate_key_counts where key = ?",
+            (duplicate_key,),
+        ).fetchone()
+        if row is None:
+            next_count = 1
+            self._connection.execute(
+                "insert into duplicate_key_counts(key, count) values (?, ?)",
+                (duplicate_key, next_count),
+            )
+            self.unique_keys_seen += 1
+        else:
+            next_count = int(row[0]) + 1
+            self._connection.execute(
+                "update duplicate_key_counts set count = ? where key = ?",
+                (next_count, duplicate_key),
+            )
+            if next_count == 2:
+                self.keys_with_duplicates += 1
+
+        self.observations += 1
+        if next_count > self.max_key_count:
+            self.max_key_count = next_count
+        self.last_key = duplicate_key
+        self.last_key_count = next_count
+        return next_count
+
+    def close(self) -> None:
+        connection = getattr(self, "_connection", None)
+        if connection is not None:
+            connection.close()
+            self._connection = None
+        tempdir = getattr(self, "_tempdir", None)
+        if tempdir is not None:
+            tempdir.cleanup()
+            self._tempdir = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
 SIEM_EVENT_FIELDS = (
     "@timestamp",
     "event.created",
+    "event.dataset",
+    "data_stream.type",
+    "data_stream.dataset",
+    "service.name",
     "observer.ingress.interface",
     "source.ip",
     "destination.ip",
     "source.port",
     "destination.port",
-    "network.bytes",
-    "udp.length",
     "udp.payload.length",
     "udp.checksum.valid",
     "udp.checksum.value_hex",
-    "ecg.frame.length.claimed",
-    "ecg.frame.length.expected",
     "ecg.frame.length_valid",
     "ecg.artcc",
     "ecg.outer_message.code",
@@ -46,6 +124,7 @@ SIEM_EVENT_FIELDS = (
     "cd2.site.id",
     "cd2.message.code",
     "cd2.message.name",
+    "cd2.message.description",
     "cd2.sequence",
     "cd2.channel",
     "cd2.channel_raw_byte",
@@ -64,7 +143,37 @@ SIEM_EVENT_FIELDS = (
     "parser.validation.drop_reason",
     "parser.validation.warnings",
     "security.sequence.delta",
+    "parser.analysis.mode",
+    "parser.duplicate.key",
+    "parser.duplicate.count",
+    "parser.duplicate.suppressed",
     "alerts",
+)
+
+SIEM_DEBUG_ONLY_EVENT_FIELDS = (
+    "network.bytes",
+    "udp.length",
+    "ecg.frame.length.claimed",
+    "ecg.frame.length.expected",
+)
+
+SIEM_ACCOUNTING_EVENT_FIELDS = (
+    "parser.accounting.output.records_seen",
+    "parser.accounting.output.records_emitted",
+    "parser.accounting.suppressed.duplicates",
+    "parser.accounting.suppressed.sampled_normals",
+    "parser.accounting.suppressed.parse_warnings",
+    "parser.accounting.suppressed.modec_altitude_missing",
+    "parser.accounting.duplicate.unique_keys_seen",
+    "parser.accounting.duplicate.keys_with_duplicates",
+    "parser.accounting.duplicate.max_key_count",
+)
+
+SIEM_FULL_EVENT_FIELDS = (
+    SIEM_EVENT_FIELDS[:-1]
+    + SIEM_DEBUG_ONLY_EVENT_FIELDS
+    + SIEM_ACCOUNTING_EVENT_FIELDS
+    + ("alerts",)
 )
 
 SIEM_OPTIONAL_EVENT_FIELDS = (
@@ -115,7 +224,7 @@ SIEM_FIELD_RENAMES = {
     "sequence_delta": "security.sequence.delta",
 }
 
-COMPACT_ALERT_FIELDS = ("id", "name", "severity", "category", "details", "message", "event.kind", "event.category", "event.action", "event.severity", "rule.id", "rule.name", "rule.category")
+COMPACT_ALERT_FIELDS = ("id", "name", "severity", "category", "details", "message", "event.kind", "event.category", "event.action", "event.severity", "rule.id", "rule.name", "rule.category", "operator.category", "operator.alert", "operator.subtype")
 SEVERITY_RANK = {"low": 10, "medium": 20, "high": 30, "critical": 40}
 
 
@@ -135,9 +244,13 @@ class RotatingJsonlWriter:
         rotate_max_bytes: int = 536870912,
         rotation_enabled: bool = False,
         include_debug_evidence: bool = False,
-        normal_record_sample_rate: int = 100,
-        emit_parse_warning_alerts: bool = False,
-        emit_modec_altitude_missing_alerts: bool = False,
+        normal_record_sample_rate: int = 1,
+        emit_parse_warning_alerts: bool = True,
+        emit_modec_altitude_missing_alerts: bool = True,
+        data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+        data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+        event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+        service_name: str = DEFAULT_LIVE_SERVICE_NAME,
         now_fn: Optional[NowFn] = None,
     ) -> None:
         if rotate_seconds <= 0:
@@ -155,7 +268,16 @@ class RotatingJsonlWriter:
         self.normal_record_sample_rate = int(normal_record_sample_rate)
         self.emit_parse_warning_alerts = bool(emit_parse_warning_alerts)
         self.emit_modec_altitude_missing_alerts = bool(emit_modec_altitude_missing_alerts)
+        self.data_stream_type = data_stream_type
+        self.data_stream_dataset = data_stream_dataset
+        self.event_dataset = event_dataset
+        self.service_name = service_name
         self._normal_event_counter = 0
+        self._records_seen = 0
+        self._records_emitted = 0
+        self._duplicate_suppressed = 0
+        self._sampled_normal_suppressed = 0
+        self._duplicate_accounting = _DuplicateKeyAccounting()
         self._now_fn = now_fn if now_fn is not None else _utc_now
         self._active_started_at_utc = self._initial_active_started_at()
 
@@ -175,6 +297,10 @@ class RotatingJsonlWriter:
             normal_record_sample_rate=config.normal_record_sample_rate,
             emit_parse_warning_alerts=config.emit_parse_warning_alerts,
             emit_modec_altitude_missing_alerts=config.emit_modec_altitude_missing_alerts,
+            data_stream_type=config.data_stream_type,
+            data_stream_dataset=config.data_stream_dataset,
+            event_dataset=config.event_dataset,
+            service_name=config.service_name,
             now_fn=now_fn,
         )
 
@@ -184,14 +310,94 @@ class RotatingJsonlWriter:
             include_debug_evidence=self.include_debug_evidence,
             emit_parse_warning_alerts=self.emit_parse_warning_alerts,
             emit_modec_altitude_missing_alerts=self.emit_modec_altitude_missing_alerts,
+            data_stream_type=self.data_stream_type,
+            data_stream_dataset=self.data_stream_dataset,
+            event_dataset=self.event_dataset,
+            service_name=self.service_name,
         )
-        if encoded_record is None or not self._should_emit_record(record, encoded_record):
+        if encoded_record is None:
             return JsonlWriteResult(
                 active_path=str(self.active_path),
                 bytes_written=0,
                 rotated_path=None,
             )
 
+        self._records_seen += 1
+        duplicate_key = _analysis_duplicate_key(encoded_record)
+        duplicate_count = self._register_duplicate_observation(duplicate_key)
+        if duplicate_key is not None and duplicate_count > 1:
+            if not _should_emit_duplicate_observation(encoded_record, duplicate_count):
+                self._duplicate_suppressed += 1
+                return JsonlWriteResult(
+                    active_path=str(self.active_path),
+                    bytes_written=0,
+                    rotated_path=None,
+                )
+
+        if not self._should_emit_record(record, encoded_record):
+            self._sampled_normal_suppressed += 1
+            return JsonlWriteResult(
+                active_path=str(self.active_path),
+                bytes_written=0,
+                rotated_path=None,
+            )
+
+        self._records_emitted += 1
+        _apply_analysis_mode_accounting(
+            encoded_record,
+            duplicate_key=duplicate_key,
+            duplicate_count=duplicate_count,
+            records_seen=self._records_seen,
+            records_emitted=self._records_emitted,
+            duplicates_suppressed=self._duplicate_suppressed,
+            sampled_normals_suppressed=self._sampled_normal_suppressed,
+            duplicate_unique_keys_seen=self._duplicate_accounting.unique_keys_seen,
+            duplicate_keys_with_duplicates=self._duplicate_keys_with_duplicates(),
+            duplicate_max_key_count=self._duplicate_max_key_count(),
+        )
+
+        return self._write_encoded_record(encoded_record)
+
+    def write_accounting_snapshot(self, *, reason: str = "snapshot") -> JsonlWriteResult:
+        """Append a final/heartbeat accounting snapshot without changing ECG counts."""
+
+        if self._records_seen == 0:
+            return JsonlWriteResult(
+                active_path=str(self.active_path),
+                bytes_written=0,
+                rotated_path=None,
+            )
+
+        now = self._now_fn()
+        snapshot = {
+            "@timestamp": _format_iso_utc(now),
+            "event.created": _format_iso_utc(now),
+            "event.kind": "metric",
+            "event.category": "parser_accounting",
+            "event.action": "parser-accounting-snapshot",
+            "event.dataset": self.event_dataset,
+            "data_stream.type": self.data_stream_type,
+            "data_stream.dataset": self.data_stream_dataset,
+            "service.name": self.service_name,
+            "record_type": "parser_accounting",
+            "parser.analysis.mode": "mode1_analysis_duplicate_only",
+            "parser.accounting.snapshot.reason": reason,
+            "parser.accounting.output.records_seen": self._records_seen,
+            "parser.accounting.output.records_emitted": self._records_emitted,
+            "parser.accounting.suppressed.duplicates": self._duplicate_suppressed,
+            "parser.accounting.suppressed.sampled_normals": self._sampled_normal_suppressed,
+            "parser.accounting.suppressed.parse_warnings": 0,
+            "parser.accounting.suppressed.modec_altitude_missing": 0,
+            "parser.accounting.duplicate.unique_keys_seen": self._duplicate_accounting.unique_keys_seen,
+            "parser.accounting.duplicate.keys_with_duplicates": self._duplicate_keys_with_duplicates(),
+            "parser.accounting.duplicate.max_key_count": self._duplicate_max_key_count(),
+            "parser.accounting.duplicate.observations": self._duplicate_accounting.observations,
+            "parser.accounting.duplicate.last_key": self._duplicate_accounting.last_key,
+            "parser.accounting.duplicate.last_key.count": self._duplicate_accounting.last_key_count,
+        }
+        return self._write_encoded_record(snapshot)
+
+    def _write_encoded_record(self, encoded_record: Mapping[str, object]) -> JsonlWriteResult:
         payload = (
             json.dumps(encoded_record, sort_keys=True, separators=(",", ":"), default=str)
             + "\n"
@@ -209,6 +415,17 @@ class RotatingJsonlWriter:
             rotated_path=str(rotated_path) if rotated_path is not None else None,
         )
 
+    def _register_duplicate_observation(self, duplicate_key: Optional[str]) -> int:
+        if duplicate_key is None:
+            return 0
+        return self._duplicate_accounting.register(duplicate_key)
+
+    def _duplicate_keys_with_duplicates(self) -> int:
+        return self._duplicate_accounting.keys_with_duplicates
+
+    def _duplicate_max_key_count(self) -> int:
+        return self._duplicate_accounting.max_key_count
+
     def _should_emit_record(
         self,
         source_record: Mapping[str, object],
@@ -219,6 +436,8 @@ class RotatingJsonlWriter:
         if _has_actionable_alerts(encoded_record):
             return True
         if self.normal_record_sample_rate <= 1:
+            if isinstance(encoded_record, dict):
+                encoded_record["event.sample.rate"] = 1
             return True
 
         self._normal_event_counter += 1
@@ -312,18 +531,33 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _format_iso_utc(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    value = value.astimezone(timezone.utc)
+    return value.isoformat().replace("+00:00", "Z")
+
+
 def _encode_jsonl_record(
     record: Dict[str, object],
     *,
     include_debug_evidence: bool = False,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME,
 ) -> bytes:
     encoded_record = _compact_live_record(
         record,
         include_debug_evidence=include_debug_evidence,
         emit_parse_warning_alerts=emit_parse_warning_alerts,
         emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+        data_stream_type=data_stream_type,
+        data_stream_dataset=data_stream_dataset,
+        event_dataset=event_dataset,
+        service_name=service_name,
     )
     if encoded_record is None:
         return b""
@@ -338,8 +572,12 @@ def _compact_live_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME,
 ) -> Optional[Dict[str, object]]:
     record_type = record.get("record_type")
     if record_type == "ecg_event":
@@ -348,6 +586,10 @@ def _compact_live_record(
             include_debug_evidence=include_debug_evidence,
             emit_parse_warning_alerts=emit_parse_warning_alerts,
             emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+            data_stream_type=data_stream_type,
+            data_stream_dataset=data_stream_dataset,
+            event_dataset=event_dataset,
+            service_name=service_name,
         )
     if record_type == "ecg_parse_error":
         return _compact_parse_error_record(
@@ -355,6 +597,10 @@ def _compact_live_record(
             include_debug_evidence=include_debug_evidence,
             emit_parse_warning_alerts=emit_parse_warning_alerts,
             emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+            data_stream_type=data_stream_type,
+            data_stream_dataset=data_stream_dataset,
+            event_dataset=event_dataset,
+            service_name=service_name,
         )
     return dict(record)
 
@@ -363,8 +609,12 @@ def _compact_live_event_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME,
 ) -> Optional[Dict[str, object]]:
     if not _should_emit_live_event(record):
         return None
@@ -377,6 +627,10 @@ def _compact_live_event_record(
         include_debug_evidence=include_debug_evidence,
         emit_parse_warning_alerts=emit_parse_warning_alerts,
         emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+        data_stream_type=data_stream_type,
+        data_stream_dataset=data_stream_dataset,
+        event_dataset=event_dataset,
+        service_name=service_name,
     )
 
 
@@ -384,8 +638,12 @@ def _compact_parse_error_record(
     record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME,
 ) -> Dict[str, object]:
     normalized = _renamed_record(record)
     normalized["parser.validation.accepted"] = False
@@ -398,6 +656,10 @@ def _compact_parse_error_record(
         include_debug_evidence=include_debug_evidence,
         emit_parse_warning_alerts=emit_parse_warning_alerts,
         emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
+        data_stream_type=data_stream_type,
+        data_stream_dataset=data_stream_dataset,
+        event_dataset=event_dataset,
+        service_name=service_name,
     )
 
 
@@ -406,14 +668,26 @@ def _project_normalized_siem_record(
     source_record: Mapping[str, object],
     *,
     include_debug_evidence: bool = False,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
+    data_stream_type: str = DEFAULT_LIVE_DATA_STREAM_TYPE,
+    data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
+    event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
+    service_name: str = DEFAULT_LIVE_SERVICE_NAME,
 ) -> Dict[str, object]:
+    normalized_with_defaults = dict(normalized)
+    _scope_parser_validation_warnings_for_siem(normalized_with_defaults, source_record)
+    normalized_with_defaults.setdefault("data_stream.type", data_stream_type)
+    normalized_with_defaults.setdefault("data_stream.dataset", data_stream_dataset)
+    normalized_with_defaults.setdefault("event.dataset", event_dataset)
+    normalized_with_defaults.setdefault("service.name", service_name)
+
+    projected_fields = SIEM_FULL_EVENT_FIELDS if include_debug_evidence else SIEM_EVENT_FIELDS
     compact: Dict[str, object] = {}
-    for key in SIEM_EVENT_FIELDS:
+    for key in projected_fields:
         if key == "alerts":
             continue
-        compact[key] = _clean_unavailable_value(normalized.get(key))
+        compact[key] = _clean_unavailable_value(normalized_with_defaults.get(key))
 
     compact["alerts"] = _compact_alerts(
         source_record,
@@ -432,6 +706,24 @@ def _apply_common_defaults(normalized: Dict[str, object], record: Mapping[str, o
         normalized["parser.validation.warnings"] = []
     if normalized.get("radar.subtypes") is None:
         normalized["radar.subtypes"] = []
+    if normalized.get("cd2.message.description") is None:
+        message_code = normalized.get("cd2.message.code")
+        message_name = normalized.get("cd2.message.name")
+        if message_code is not None and message_name in (None, "unknown", ""):
+            normalized["cd2.message.description"] = f"unknown_message_code:{message_code}"
+    # metadata-only unknown message-code warnings are regular traffic;
+    # preserve the searchable description but do not emit a SIEM warning.
+    warnings = normalized.get("parser.validation.warnings")
+    if isinstance(warnings, list):
+        normalized["parser.validation.warnings"] = [
+            warning
+            for warning in warnings
+            if not (
+                isinstance(warning, dict)
+                and _clean_str(warning.get("code")) == "unknown_message_code"
+                and normalized.get("cd2.message.description") is not None
+            )
+        ]
     if normalized.get("hash.payload.sha256") is None and record.get("sha256_ecg_payload") is not None:
         normalized["hash.payload.sha256"] = record.get("sha256_ecg_payload")
 
@@ -453,37 +745,61 @@ def _should_emit_live_event(record: Mapping[str, object]) -> bool:
 def _compact_alerts(
     record: Mapping[str, object],
     *,
-    emit_parse_warning_alerts: bool = False,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
+    emit_modec_altitude_missing_alerts: bool = True,
 ) -> list[dict[str, object]]:
     alerts = []
     for alert in _normal_alerts(record):
+        scoped_alert = _scope_parse_warning_alert_for_siem(record, alert)
+        if scoped_alert is None:
+            continue
+        if _is_operator_metadata_only_alert(record, scoped_alert):
+            continue
         if _is_suppressed_parse_warning_alert(
             record,
-            alert,
+            scoped_alert,
             emit_parse_warning_alerts=emit_parse_warning_alerts,
         ):
             continue
         if _is_suppressed_modec_altitude_missing_alert(
             record,
-            alert,
+            scoped_alert,
             emit_modec_altitude_missing_alerts=emit_modec_altitude_missing_alerts,
         ):
             continue
-        alerts.append(_compact_alert(alert))
+        alerts.append(_compact_alert(scoped_alert))
     return alerts
 
 
 def _has_actionable_alerts(record: Mapping[str, object]) -> bool:
-    alerts = record.get("alerts")
-    return bool(alerts)
+    for alert in _normal_alerts(record):
+        if not _is_operator_metadata_only_alert(record, alert):
+            return True
+    return False
+
+
+def _should_emit_duplicate_observation(
+    record: Mapping[str, object],
+    duplicate_count: int,
+) -> bool:
+    return False
+
+
+def _is_operator_metadata_only_alert(
+    record: Mapping[str, object],
+    alert: Mapping[str, object],
+) -> bool:
+    alert_id = _clean_str(alert.get("id"))
+    if alert_id in {"OAD-ECG-003", "OAD-ECG-005", "OAD-ECG-008"}:
+        return True
+    return False
 
 
 def _is_suppressed_parse_warning_alert(
     record: Mapping[str, object],
     alert: Mapping[str, object],
     *,
-    emit_parse_warning_alerts: bool = False,
+    emit_parse_warning_alerts: bool = True,
 ) -> bool:
     if emit_parse_warning_alerts:
         return False
@@ -499,7 +815,7 @@ def _is_suppressed_modec_altitude_missing_alert(
     record: Mapping[str, object],
     alert: Mapping[str, object],
     *,
-    emit_modec_altitude_missing_alerts: bool = False,
+    emit_modec_altitude_missing_alerts: bool = True,
 ) -> bool:
     if emit_modec_altitude_missing_alerts:
         return False
@@ -509,6 +825,185 @@ def _is_suppressed_modec_altitude_missing_alert(
     if accepted is None:
         accepted = record.get("parser.validation.accepted")
     return accepted is not False
+
+
+
+def _scope_parser_validation_warnings_for_siem(
+    normalized: Dict[str, object],
+    source_record: Mapping[str, object],
+) -> None:
+    warnings = _warning_dicts(normalized.get("parser.validation.warnings"))
+    if not warnings:
+        normalized["parser.validation.warnings"] = []
+        return
+    normalized["parser.validation.warnings"] = _scope_warning_dicts_for_record(source_record, warnings)
+
+
+def _scope_parse_warning_alert_for_siem(
+    record: Mapping[str, object],
+    alert: Mapping[str, object],
+) -> Optional[dict[str, object]]:
+    if _clean_str(alert.get("id")) != "OAD-ECG-003":
+        return dict(alert)
+
+    scoped = dict(alert)
+    evidence = scoped.get("evidence")
+    if not isinstance(evidence, Mapping):
+        return scoped
+
+    if "parse_warnings" not in evidence:
+        return scoped
+
+    warnings = _warning_dicts(evidence.get("parse_warnings"))
+    scoped_warnings = _scope_warning_dicts_for_record(record, warnings)
+    if not scoped_warnings:
+        return None
+
+    scoped_evidence = dict(evidence)
+    scoped_evidence["parse_warnings"] = scoped_warnings
+    scoped["evidence"] = scoped_evidence
+    return scoped
+
+
+def _scope_warning_dicts_for_record(
+    record: Mapping[str, object],
+    warnings: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    scoped: list[dict[str, object]] = []
+    seen: set[tuple[object, object, object]] = set()
+    for warning in warnings:
+        if not _parse_warning_applies_to_record(record, warning):
+            continue
+        key = (warning.get("code"), warning.get("message"), warning.get("parser_stage"))
+        if key in seen:
+            continue
+        seen.add(key)
+        scoped.append(dict(warning))
+    return scoped
+
+
+def _warning_dicts(value: object) -> list[dict[str, object]]:
+    warnings: list[dict[str, object]] = []
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return warnings
+    for item in value:
+        if isinstance(item, Mapping):
+            warnings.append(dict(item))
+    return warnings
+
+
+def _parse_warning_applies_to_record(
+    record: Mapping[str, object],
+    warning: Mapping[str, object],
+) -> bool:
+    warning_code = _clean_str(warning.get("code"))
+    if warning_code != "unknown_message_code":
+        return True
+
+    record_message = _clean_str(record.get("message"))
+    if record_message is None:
+        record_message = _clean_str(record.get("cd2.message.name"))
+    if record_message not in {"unknown", "none"}:
+        return False
+
+    record_message_code = _clean_str(record.get("message_code"))
+    if record_message_code is None:
+        record_message_code = _clean_str(record.get("cd2.message.code"))
+    warning_message_code = _unknown_message_code_from_warning(warning)
+    if warning_message_code is None or record_message_code is None:
+        return True
+    return warning_message_code == record_message_code
+
+
+def _unknown_message_code_from_warning(warning: Mapping[str, object]) -> Optional[str]:
+    message = _clean_str(warning.get("message"))
+    if message is None or ":" not in message:
+        return None
+    candidate = message.rsplit(":", 1)[-1].strip()
+    return candidate or None
+
+
+
+def _analysis_duplicate_key(record: Mapping[str, object]) -> Optional[str]:
+    """Return a bounded exact-duplicate key for Mode 1 analysis output.
+
+    The key intentionally excludes capture timestamp and parser accounting fields.
+    It requires at least one parser hash so low-confidence/incomplete records are
+    emitted instead of suppressed.
+    """
+
+    message_hash = record.get("hash.message.sha256")
+    payload_hash = record.get("hash.payload.sha256")
+    fingerprint = record.get("ecg.fingerprint")
+    if not message_hash and not payload_hash and not fingerprint:
+        return None
+
+    key_fields = (
+        "source.ip",
+        "destination.ip",
+        "source.port",
+        "destination.port",
+        "udp.length",
+        "udp.payload.length",
+        "udp.checksum.value_hex",
+        "ecg.frame.length.claimed",
+        "ecg.frame.length.expected",
+        "ecg.artcc",
+        "cd2.site.id",
+        "cd2.message.code",
+        "cd2.message.name",
+        "cd2.sequence",
+        "cd2.channel",
+        "cd2.channel_raw_byte",
+        "ecg.router.timestamp_sec",
+        "cd2.radar.timestamp_sec",
+        "radar.range_nm",
+        "radar.acp",
+        "radar.azimuth_degrees",
+        "radar.mode_3_code",
+        "radar.altitude_feet",
+        "hash.payload.sha256",
+        "hash.message.sha256",
+        "ecg.fingerprint",
+    )
+    material = [(key, record.get(key)) for key in key_fields]
+    raw = json.dumps(material, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _apply_analysis_mode_accounting(
+    record: Dict[str, object],
+    *,
+    duplicate_key: Optional[str],
+    duplicate_count: int,
+    records_seen: int,
+    records_emitted: int,
+    duplicates_suppressed: int,
+    sampled_normals_suppressed: int,
+    duplicate_unique_keys_seen: int,
+    duplicate_keys_with_duplicates: int,
+    duplicate_max_key_count: int,
+) -> None:
+    record.setdefault("event.sample.rate", 1)
+    record["parser.analysis.mode"] = "mode1_analysis_duplicate_only"
+    record["parser.duplicate.key"] = duplicate_key
+    record["parser.duplicate.count"] = duplicate_count if duplicate_key is not None else 0
+    record["parser.duplicate.suppressed"] = 0
+
+    accounting_values = {
+        "parser.accounting.output.records_seen": records_seen,
+        "parser.accounting.output.records_emitted": records_emitted,
+        "parser.accounting.suppressed.duplicates": duplicates_suppressed,
+        "parser.accounting.suppressed.sampled_normals": sampled_normals_suppressed,
+        "parser.accounting.suppressed.parse_warnings": 0,
+        "parser.accounting.suppressed.modec_altitude_missing": 0,
+        "parser.accounting.duplicate.unique_keys_seen": duplicate_unique_keys_seen,
+        "parser.accounting.duplicate.keys_with_duplicates": duplicate_keys_with_duplicates,
+        "parser.accounting.duplicate.max_key_count": duplicate_max_key_count,
+    }
+    for key, value in accounting_values.items():
+        if key in record:
+            record[key] = value
 
 
 def _clean_unavailable_value(value: object) -> object:
