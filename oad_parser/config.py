@@ -21,6 +21,8 @@ DEFAULT_LIVE_OUTPUT_CSV_FILE = "/nsm/ecg/ecg.csv"
 DEFAULT_LIVE_OUTPUT_DIR = "/nsm/ecg"
 DEFAULT_LIVE_AUDIT_FILE = "/var/log/oad-parser/ecg-audit.jsonl"
 DEFAULT_LIVE_STATUS_FILE = "/run/oad-parser/ecg-status.json"
+DEFAULT_LIVE_FIELD_POLICY_PATH = "/etc/oad-parser/field-policy.json"
+DEFAULT_LIVE_ALERT_CONFIG_PATH = "/etc/oad-parser/ecg-alerts.json"
 DEFAULT_LIVE_INTERFACE = "eno1"
 DEFAULT_LIVE_MODE = "legacy_jsonl"
 DEFAULT_LIVE_DATA_STREAM_TYPE = "logs"
@@ -105,7 +107,8 @@ class LiveParserConfig:
 
     audit_file: str = DEFAULT_LIVE_AUDIT_FILE
     status_file: str = DEFAULT_LIVE_STATUS_FILE
-    alert_config_path: str | None = None
+    field_policy_path: str = DEFAULT_LIVE_FIELD_POLICY_PATH
+    alert_config_path: str | None = DEFAULT_LIVE_ALERT_CONFIG_PATH
     siem_debug_evidence: bool = DEFAULT_LIVE_SIEM_DEBUG_EVIDENCE
     normal_record_sample_rate: int = DEFAULT_LIVE_NORMAL_RECORD_SAMPLE_RATE
     emit_parse_warning_alerts: bool = DEFAULT_LIVE_EMIT_PARSE_WARNING_ALERTS
@@ -342,6 +345,14 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
     if parser.has_section("Alerts"):
         config.alert_config_path = _optional_string(
             parser.get("Alerts", "alert_config_path", fallback=None)
+        )
+
+    if parser.has_section("Fields"):
+        config.field_policy_path = _get_string(
+            parser,
+            "Fields",
+            "field_policy_path",
+            config.field_policy_path,
         )
 
     _apply_existing_ini_fallbacks(parser, config)

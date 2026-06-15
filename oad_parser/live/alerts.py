@@ -115,6 +115,9 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         return None
 
     config_path = Path(path)
+    if not config_path.exists():
+        return None
+
     with config_path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
 

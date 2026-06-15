@@ -33,6 +33,75 @@ class JsonlWriteResult:
     rotated_path: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class FieldPolicy:
+    """Runtime-supported field policy.
+
+    Phase 5B intentionally supports only suppression of fields already cataloged
+    as optional. Compact/debug/accounting/evidence fields remain protected.
+    """
+
+    schema_version: str = "2026-06-15.phase5b"
+    policy_name: str = "default"
+    disabled_fields: frozenset[str] = frozenset()
+
+
+def load_field_policy(path: str | Path | None) -> Optional[FieldPolicy]:
+    if path is None or str(path).strip() == "":
+        return None
+    policy_path = Path(path)
+    if not policy_path.exists():
+        return None
+    with policy_path.open("r", encoding="utf-8") as handle:
+        data = json.load(handle)
+    return field_policy_from_dict(data)
+
+
+def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
+    if not isinstance(data, Mapping):
+        raise ValueError("field policy must be a JSON object")
+    allowed_keys = {
+        "schema_version",
+        "policy_name",
+        "enabled_fields",
+        "required_fields",
+        "optional_fields",
+        "disabled_fields",
+        "display_labels",
+        "grouping",
+        "desired_order",
+        "siem_mapping_notes",
+        "compatibility_mode",
+        "operator_notes",
+    }
+    unknown = sorted(set(data) - allowed_keys)
+    if unknown:
+        raise ValueError("field policy has unknown keys: %s" % ", ".join(unknown))
+    schema_version = str(data.get("schema_version") or "2026-06-15.phase5b")
+    if schema_version not in {"2026-06-15.phase5a", "2026-06-15.phase5b"}:
+        raise ValueError("field policy schema_version is not supported")
+
+    disabled = _string_sequence(data.get("disabled_fields", []), "disabled_fields")
+    known_fields = set(SIEM_FULL_EVENT_FIELDS) | set(SIEM_OPTIONAL_EVENT_FIELDS)
+    unknown_fields = sorted(set(disabled) - known_fields)
+    if unknown_fields:
+        raise ValueError("field policy references unknown field(s): %s" % ", ".join(unknown_fields))
+
+    unsupported_disabled = sorted(set(disabled) - set(SIEM_OPTIONAL_EVENT_FIELDS))
+    if unsupported_disabled:
+        raise ValueError("field policy may only disable optional field(s): %s" % ", ".join(unsupported_disabled))
+
+    for unsupported_key in ("display_labels", "desired_order", "siem_mapping_notes"):
+        if data.get(unsupported_key):
+            raise ValueError("%s is not runtime-supported by the parser" % unsupported_key)
+
+    return FieldPolicy(
+        schema_version=schema_version,
+        policy_name=str(data.get("policy_name") or "unnamed field policy")[:120],
+        disabled_fields=frozenset(disabled),
+    )
+
+
 class _DuplicateKeyAccounting:
     """Exact duplicate-key counts with bounded Python memory.
 
@@ -251,6 +320,7 @@ class RotatingJsonlWriter:
         data_stream_dataset: str = DEFAULT_LIVE_DATA_STREAM_DATASET,
         event_dataset: str = DEFAULT_LIVE_EVENT_DATASET,
         service_name: str = DEFAULT_LIVE_SERVICE_NAME,
+        field_policy: Optional[FieldPolicy] = None,
         now_fn: Optional[NowFn] = None,
     ) -> None:
         if rotate_seconds <= 0:
@@ -272,6 +342,7 @@ class RotatingJsonlWriter:
         self.data_stream_dataset = data_stream_dataset
         self.event_dataset = event_dataset
         self.service_name = service_name
+        self.field_policy = field_policy
         self._normal_event_counter = 0
         self._records_seen = 0
         self._records_emitted = 0
@@ -301,6 +372,7 @@ class RotatingJsonlWriter:
             data_stream_dataset=config.data_stream_dataset,
             event_dataset=config.event_dataset,
             service_name=config.service_name,
+            field_policy=load_field_policy(config.field_policy_path),
             now_fn=now_fn,
         )
 
@@ -355,6 +427,7 @@ class RotatingJsonlWriter:
             duplicate_keys_with_duplicates=self._duplicate_keys_with_duplicates(),
             duplicate_max_key_count=self._duplicate_max_key_count(),
         )
+        _apply_field_policy(encoded_record, self.field_policy)
 
         return self._write_encoded_record(encoded_record)
 
@@ -395,6 +468,7 @@ class RotatingJsonlWriter:
             "parser.accounting.duplicate.last_key": self._duplicate_accounting.last_key,
             "parser.accounting.duplicate.last_key.count": self._duplicate_accounting.last_key_count,
         }
+        _apply_field_policy(snapshot, self.field_policy)
         return self._write_encoded_record(snapshot)
 
     def _write_encoded_record(self, encoded_record: Mapping[str, object]) -> JsonlWriteResult:
@@ -1012,6 +1086,27 @@ def _clean_unavailable_value(value: object) -> object:
     if value == "unknown":
         return None
     return value
+
+
+def _apply_field_policy(record: Dict[str, object], policy: Optional[FieldPolicy]) -> None:
+    if policy is None:
+        return
+    for field_name in policy.disabled_fields:
+        if field_name in SIEM_OPTIONAL_EVENT_FIELDS:
+            record.pop(field_name, None)
+
+
+def _string_sequence(value: object, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        raise ValueError("%s must be an array of strings" % field_name)
+    items = []
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError("%s must be an array of strings" % field_name)
+        items.append(item)
+    return tuple(items)
 
 
 def _apply_alert_projection(

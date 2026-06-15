@@ -53,7 +53,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-15T22:37:27Z",
+  "generated_at_utc": "2026-06-15T22:58:44Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -87,8 +87,8 @@
     },
     {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "7e7acbde0532c816a7a297bb196dfb4f5d050aea65bf3abfd9f0188abdd5ed36",
-      "size_bytes": 1552
+      "sha256": "ff6aaebda60b55ce0c4c8507fe8df0fedabff4d5388a738a1f01a2eaa9b725af",
+      "size_bytes": 1714
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -162,8 +162,8 @@
     },
     {
       "path": "oad_parser/config.py",
-      "sha256": "895d974fa1d26d440449e49c1dfe5a7485647e061be3d8db6491a338048f29c0",
-      "size_bytes": 17895
+      "sha256": "37af3ae3ec579b1986f265d0f7670c4a917ab3eef63c60a2f6da092c6823728c",
+      "size_bytes": 18326
     },
     {
       "path": "oad_parser/decoders/__init__.py",
@@ -242,8 +242,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "444d4ef674ef81d331f9ce71fa9f473575e79a35c07589ef49be0f21f5ee6dcf",
-      "size_bytes": 28514
+      "sha256": "5e9460a779073423caed0b9304c8f129026d3cbbaee52bd239f2494074024c60",
+      "size_bytes": 28568
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -282,8 +282,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "644ff120aa6d071719aaa6ad93830afbb4745f0d0b50b7a1eee94b6605df2026",
-      "size_bytes": 43107
+      "sha256": "b3ac59223ed0e20d1ddb2bb341c2ce8701e1189be0f82bbd74b437ce63100640",
+      "size_bytes": 46750
     },
     {
       "path": "oad_parser/models.py",
@@ -385,7 +385,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-15T22:37:27Z",
+    "generated_at_utc": "2026-06-15T22:58:44Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "8afee16e3ccd74ace5c5cc044e88630cf4b4107689eb70f27b953f5ce22e151d",
