@@ -18,6 +18,9 @@ dist/
 build/
 dist/source-packs/
 reports/
+vendor/wheelhouse/
+_debug/
+*.bak-*
 
 # OAD parser local/sensitive artifacts
 *.pcap
@@ -29,11 +32,18 @@ reports/
 *.jsonl
 *.log
 *.tmp
+*.dpapi
+credential.dpapi
 *.rpm
 *.wav
 corpus-report.json
 corpus-summary.txt
 demo.sh
+
+# Local operator UI state and pulled evidence
+.oad-operator/
+OADOperator/
+evidence/
 
 # Private samples
 samples/private/*
