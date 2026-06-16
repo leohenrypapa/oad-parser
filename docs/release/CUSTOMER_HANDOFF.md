@@ -43,3 +43,14 @@ Customer handoff does not claim target-site acceptance. Target-site validation r
 ## ECG SIEM handoff contract
 
 The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.
+
+## Limited RC Operator UI Safety Boundary
+
+- RC4/customer acceptance is not claimed by source readiness, local tests, packaging readiness, or this UI safety pass.
+- Target-site validation and site-owner acceptance are separate gates.
+- The offline laptop must use the packaged Windows EXE customer delivery path. Do not use source-tree Python batch files as the customer runtime.
+- Unsupported in this release: field naming, field order, SIEM/ECS remap, arbitrary field removal, per-alert severity, per-alert enable/disable, cooldown, suppression, and alert evidence mutation.
+- Alert examples are not site-approved policies. Placeholder/example values such as `SITE_A`, `SITE_*`, and `EXAMPLE_*` are blocked until site-approved values are supplied.
+- Output-volume policy changes require release-authority and SIEM-owner approval.
+- Boot persistence is not implemented as an Operator UI action in this release.
+- Legacy `ecg.service` mutation is danger-gated and requires advanced mode plus explicit site-owner approval.
