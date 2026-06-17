@@ -50,7 +50,7 @@ Note: this release evidence is local/pre-site only. It does not replace target-s
 - Synthetic fixture generation.
 - End-to-end platform validation command.
 - Source-pack generator and release helper scripts.
-- Customer release handoff guardrails: `START_HERE.md`, `AI_CONTEXT.md`, release checklist, customer handoff note, traceability matrix, and scope ADR.
+- Customer release handoff guardrails: `START_HERE.md`, release checklist, customer handoff note, traceability matrix, and scope ADR.
 
 ### Changed
 

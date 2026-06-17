@@ -8,6 +8,7 @@
     "CODEOWNERS",
     "SOURCE-PACK-MANIFEST.json",
     "docs/release/STANDARDS_ADOPTION_CHECKLIST.md",
+    "docs/templates/chatgpt-codex-site-update-prompt-template.md",
     "oad_parser/corpus.py",
     "oad_parser/corpus_report.py",
     "oad_parser/fixture_samples.py",
@@ -32,6 +33,7 @@
   ],
   "excluded_prefixes": [
     ".git/",
+    ".ai/",
     ".pytest_cache/",
     "__pycache__/",
     "reports/",
@@ -53,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-17T14:17:12Z",
+  "generated_at_utc": "2026-06-17T14:24:36Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -62,8 +64,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "90dfd63071b4f7541971f639506acc791a30a58f695b7b26e2b10fe304496229",
-      "size_bytes": 4836
+      "sha256": "23329e0b226ebef131f918763886dfc1d4368cc119cf66673a77d169c7951e89",
+      "size_bytes": 4819
     },
     {
       "path": "README.md",
@@ -385,10 +387,10 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-17T14:17:12Z",
+    "generated_at_utc": "2026-06-17T14:24:36Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
-    "generator_script_sha256": "8afee16e3ccd74ace5c5cc044e88630cf4b4107689eb70f27b953f5ce22e151d",
+    "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",
     "pack_format_version": "customer-runtime-operator-pack.v2",
     "source_branch": "unavailable-non-git-source-tree",
     "source_commit": "unavailable-non-git-source-tree",
