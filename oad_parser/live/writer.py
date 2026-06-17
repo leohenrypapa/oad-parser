@@ -22,6 +22,9 @@ from oad_parser.config import (
 
 
 NowFn = Callable[[], datetime]
+FIELD_POLICY_V2_SCHEMA_VERSION = "2026-06-17.field-policy-v2"
+FIELD_POLICY_V1_SCHEMA_VERSIONS = frozenset({"2026-06-15.phase5a", "2026-06-15.phase5b"})
+FIELD_POLICY_SUPPORTED_SCHEMA_VERSIONS = FIELD_POLICY_V1_SCHEMA_VERSIONS | frozenset({FIELD_POLICY_V2_SCHEMA_VERSION})
 
 
 @dataclass(frozen=True)
@@ -37,13 +40,18 @@ class JsonlWriteResult:
 class FieldPolicy:
     """Runtime-supported field policy.
 
-    Phase 5B intentionally supports only suppression of fields already cataloged
-    as optional. Compact/debug/accounting/evidence fields remain protected.
+    V1 policies support suppression of fields already cataloged as optional.
+    V2 additionally supports controlled ordering, aliases for non-protected
+    fields, and validated SIEM mapping metadata. Compact cyber/evidence fields
+    remain protected.
     """
 
     schema_version: str = "2026-06-15.phase5b"
     policy_name: str = "default"
     disabled_fields: frozenset[str] = frozenset()
+    desired_order: tuple[str, ...] = ()
+    display_labels: Mapping[str, str] = None
+    siem_mapping_notes: Mapping[str, str] = None
 
 
 def load_field_policy(path: str | Path | None) -> Optional[FieldPolicy]:
@@ -78,7 +86,7 @@ def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
     if unknown:
         raise ValueError("field policy has unknown keys: %s" % ", ".join(unknown))
     schema_version = str(data.get("schema_version") or "2026-06-15.phase5b")
-    if schema_version not in {"2026-06-15.phase5a", "2026-06-15.phase5b"}:
+    if schema_version not in FIELD_POLICY_SUPPORTED_SCHEMA_VERSIONS:
         raise ValueError("field policy schema_version is not supported")
 
     disabled = _string_sequence(data.get("disabled_fields", []), "disabled_fields")
@@ -91,14 +99,33 @@ def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
     if unsupported_disabled:
         raise ValueError("field policy may only disable optional field(s): %s" % ", ".join(unsupported_disabled))
 
-    for unsupported_key in ("display_labels", "desired_order", "siem_mapping_notes"):
-        if data.get(unsupported_key):
-            raise ValueError("%s is not runtime-supported by the parser" % unsupported_key)
+    desired_order = _string_sequence(data.get("desired_order", []), "desired_order")
+    display_labels = _string_map(data.get("display_labels", {}), "display_labels")
+    siem_mapping_notes = _string_map(data.get("siem_mapping_notes", {}), "siem_mapping_notes")
+    if schema_version in FIELD_POLICY_V1_SCHEMA_VERSIONS:
+        for unsupported_key, value in (
+            ("display_labels", display_labels),
+            ("desired_order", desired_order),
+            ("siem_mapping_notes", siem_mapping_notes),
+        ):
+            if value:
+                raise ValueError("%s is not runtime-supported by field policy v1" % unsupported_key)
+    else:
+        _validate_field_policy_v2_controls(
+            known_fields=known_fields,
+            disabled=disabled,
+            desired_order=desired_order,
+            display_labels=display_labels,
+            siem_mapping_notes=siem_mapping_notes,
+        )
 
     return FieldPolicy(
         schema_version=schema_version,
         policy_name=str(data.get("policy_name") or "unnamed field policy")[:120],
         disabled_fields=frozenset(disabled),
+        desired_order=desired_order,
+        display_labels=dict(display_labels),
+        siem_mapping_notes=dict(siem_mapping_notes),
     )
 
 
@@ -473,7 +500,12 @@ class RotatingJsonlWriter:
 
     def _write_encoded_record(self, encoded_record: Mapping[str, object]) -> JsonlWriteResult:
         payload = (
-            json.dumps(encoded_record, sort_keys=True, separators=(",", ":"), default=str)
+            json.dumps(
+                encoded_record,
+                sort_keys=not _field_policy_controls_order(self.field_policy),
+                separators=(",", ":"),
+                default=str,
+            )
             + "\n"
         ).encode("utf-8")
 
@@ -1094,6 +1126,26 @@ def _apply_field_policy(record: Dict[str, object], policy: Optional[FieldPolicy]
     for field_name in policy.disabled_fields:
         if field_name in SIEM_OPTIONAL_EVENT_FIELDS:
             record.pop(field_name, None)
+    labels = dict(policy.display_labels or {})
+    if not policy.desired_order and not labels:
+        return
+
+    ordered: Dict[str, object] = {}
+    emitted = set()
+    for field_name in policy.desired_order:
+        if field_name in record and field_name not in emitted:
+            ordered[labels.get(field_name, field_name)] = record[field_name]
+            emitted.add(field_name)
+    for field_name, value in record.items():
+        if field_name in emitted:
+            continue
+        ordered[labels.get(field_name, field_name)] = value
+    record.clear()
+    record.update(ordered)
+
+
+def _field_policy_controls_order(policy: Optional[FieldPolicy]) -> bool:
+    return bool(policy and policy.schema_version == FIELD_POLICY_V2_SCHEMA_VERSION and policy.desired_order)
 
 
 def _string_sequence(value: object, field_name: str) -> tuple[str, ...]:
@@ -1107,6 +1159,88 @@ def _string_sequence(value: object, field_name: str) -> tuple[str, ...]:
             raise ValueError("%s must be an array of strings" % field_name)
         items.append(item)
     return tuple(items)
+
+
+def _string_map(value: object, field_name: str) -> Dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("%s must be an object of strings" % field_name)
+    items: Dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not isinstance(item, str):
+            raise ValueError("%s must be an object of strings" % field_name)
+        items[key] = item
+    return items
+
+
+def _validate_field_policy_v2_controls(
+    *,
+    known_fields: set[str],
+    disabled: Sequence[str],
+    desired_order: Sequence[str],
+    display_labels: Mapping[str, str],
+    siem_mapping_notes: Mapping[str, str],
+) -> None:
+    protected_fields = set(SIEM_EVENT_FIELDS)
+    disabled_set = set(disabled)
+    unknown_order = sorted(set(desired_order) - known_fields)
+    unknown_labels = sorted(set(display_labels) - known_fields)
+    unknown_mapping = sorted(set(siem_mapping_notes) - known_fields)
+    unknown = sorted(set(unknown_order) | set(unknown_labels) | set(unknown_mapping))
+    if unknown:
+        raise ValueError("field policy references unknown field(s): %s" % ", ".join(unknown))
+    duplicates = _duplicates(desired_order)
+    if duplicates:
+        raise ValueError("desired_order contains duplicate field(s): %s" % ", ".join(duplicates))
+    disabled_order = sorted(set(desired_order) & disabled_set)
+    if disabled_order:
+        raise ValueError("desired_order references disabled field(s): %s" % ", ".join(disabled_order))
+    protected_aliases = sorted(set(display_labels) & protected_fields)
+    if protected_aliases:
+        raise ValueError("protected compact field(s) cannot be renamed: %s" % ", ".join(protected_aliases))
+
+    output_names = set(known_fields)
+    for source, alias in display_labels.items():
+        _validate_siem_field_name(alias, "display_labels.%s" % source)
+        if source in disabled_set:
+            raise ValueError("display_labels references disabled field: %s" % source)
+        if alias in known_fields and alias != source:
+            raise ValueError("display_labels alias collides with existing field: %s" % alias)
+        if alias in output_names and alias != source:
+            raise ValueError("display_labels creates duplicate output field: %s" % alias)
+        output_names.add(alias)
+    duplicate_aliases = sorted({alias for alias in display_labels.values() if list(display_labels.values()).count(alias) > 1})
+    if duplicate_aliases:
+        raise ValueError("display_labels contains duplicate alias output(s): %s" % ", ".join(duplicate_aliases))
+
+    for source, target in siem_mapping_notes.items():
+        if source in disabled_set:
+            raise ValueError("siem_mapping_notes references disabled field: %s" % source)
+        _validate_siem_field_name(target, "siem_mapping_notes.%s" % source)
+
+
+def _validate_siem_field_name(name: str, label: str) -> None:
+    if not name or len(name) > 128:
+        raise ValueError("%s must be 1-128 characters" % label)
+    first = name[0]
+    if not (first.isalpha() or first in {"_", "@"}):
+        raise ValueError("%s must start with a letter, underscore, or @" % label)
+    blocked = set(" \t\r\n/\\;&|`$<>'\"(){}[]*?!")
+    if any(ord(ch) < 32 or ch in blocked for ch in name):
+        raise ValueError("%s contains unsupported characters" % label)
+    if any(not (ch.isalnum() or ch in {"_", ".", "-", "@"}) for ch in name):
+        raise ValueError("%s contains unsupported characters" % label)
+
+
+def _duplicates(values: Sequence[str]) -> list[str]:
+    seen = set()
+    duplicates = set()
+    for value in values:
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates)
 
 
 def _apply_alert_projection(
