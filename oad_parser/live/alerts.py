@@ -14,6 +14,27 @@ SEVERITY_RANK = {
     "critical": 40,
 }
 
+ALERT_POLICY_V2_SCHEMA_VERSION = "2026-06-17.alert-policy-v2"
+ALERT_POLICY_LEGACY_SCHEMA_VERSIONS = frozenset(
+    {
+        "",
+        "2026-06-15.phase6a",
+        "2026-06-15.phase6b",
+    }
+)
+ALERT_POLICY_SUPPORTED_OVERRIDE_KEYS = frozenset({"enabled", "severity"})
+ALERT_POLICY_UNSUPPORTED_OVERRIDE_KEYS = frozenset(
+    {
+        "cooldown",
+        "cooldown_seconds",
+        "evidence",
+        "evidence_fields",
+        "evidence_mutation",
+        "suppression_seconds",
+        "suppression_window_seconds",
+    }
+)
+
 ALERT_DEFINITIONS = {
     "ECG-CD2-001": ("unauthorized_source_tuple", "high", "source_integrity"),
     "ECG-CD2-002": ("malformed_ecg_frame_length", "high", "protocol_integrity"),
@@ -106,6 +127,15 @@ class EcgAlertConfig:
     legacy_sequence_delta_max_abs: int | None = None
     max_radar_time_delta_seconds: float | None = None
     max_router_time_delta_seconds: float | None = None
+    desired_alert_overrides: Mapping[str, "AlertOverride"] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AlertOverride:
+    """Allowlisted v2 per-alert behavior override."""
+
+    enabled: bool | None = None
+    severity: str | None = None
 
 
 def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
@@ -125,6 +155,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         raise ValueError("ECG alert config must be a JSON object")
 
     allowed_keys = {
+        "schema_version",
         "version",
         "known_sites",
         "allowed_message_types",
@@ -151,6 +182,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         "legacy_sequence_delta_max_abs",
         "max_radar_time_delta_seconds",
         "max_router_time_delta_seconds",
+        "desired_alert_overrides",
     }
     unknown = sorted(set(data) - allowed_keys)
     if unknown:
@@ -159,6 +191,10 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
     version = _optional_int(data.get("version", 1), "version")
     if version != 1:
         raise ValueError("ECG alert config version must be 1")
+
+    schema_version = str(data.get("schema_version") or "")
+    if schema_version not in ALERT_POLICY_LEGACY_SCHEMA_VERSIONS | {ALERT_POLICY_V2_SCHEMA_VERSION}:
+        raise ValueError("Unsupported ECG alert config schema_version: %s" % schema_version)
 
     altitude_min = _optional_int(data.get("altitude_min_ft"), "altitude_min_ft")
     altitude_max = _optional_int(data.get("altitude_max_ft"), "altitude_max_ft")
@@ -216,6 +252,11 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
     if max_router_time_delta_seconds is not None and max_router_time_delta_seconds < 0:
         raise ValueError("max_router_time_delta_seconds must be >= 0")
 
+    desired_alert_overrides = _alert_override_map(
+        data.get("desired_alert_overrides"),
+        schema_version,
+    )
+
     return EcgAlertConfig(
         version=version,
         known_sites=_string_set(data.get("known_sites"), "known_sites"),
@@ -252,6 +293,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         legacy_sequence_delta_max_abs=legacy_sequence_delta_max_abs,
         max_radar_time_delta_seconds=max_radar_time_delta_seconds,
         max_router_time_delta_seconds=max_router_time_delta_seconds,
+        desired_alert_overrides=desired_alert_overrides,
     )
 
 
@@ -284,7 +326,7 @@ def evaluate_ecg_record_alerts(
     if config is not None:
         alerts.extend(_configured_alerts(record, data_words, config, message, message_type, site_id))
 
-    return _deduplicate_alerts(alerts)
+    return _deduplicate_alerts(_apply_alert_overrides(alerts, config))
 
 
 def evaluate_ecg_parse_error_alerts(
@@ -315,7 +357,7 @@ def evaluate_ecg_parse_error_alerts(
                 _as_str(record.get("site_id")),
             )
         )
-    return _deduplicate_alerts(alerts)
+    return _deduplicate_alerts(_apply_alert_overrides(alerts, config))
 
 
 def apply_legacy_alert_fields(record: dict[str, Any], alerts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -635,6 +677,70 @@ def _deduplicate_alerts(alerts: Sequence[Mapping[str, Any]]) -> list[dict[str, A
         seen.add(key)
         result.append(dict(alert))
     return result
+
+
+def _apply_alert_overrides(
+    alerts: Sequence[Mapping[str, Any]],
+    config: EcgAlertConfig | None,
+) -> list[dict[str, Any]]:
+    if config is None or not config.desired_alert_overrides:
+        return [dict(alert) for alert in alerts]
+
+    result: list[dict[str, Any]] = []
+    for alert in alerts:
+        alert_id = str(alert.get("id") or "")
+        override = config.desired_alert_overrides.get(alert_id)
+        if override is not None and override.enabled is False:
+            continue
+        updated = dict(alert)
+        if override is not None and override.severity:
+            updated["severity"] = override.severity
+            updated["event.severity"] = override.severity
+        result.append(updated)
+    return result
+
+
+def _alert_override_map(value: Any, schema_version: str) -> dict[str, AlertOverride]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError("desired_alert_overrides must be an object keyed by alert ID")
+    if value and schema_version != ALERT_POLICY_V2_SCHEMA_VERSION:
+        raise ValueError(
+            "desired_alert_overrides require schema_version %s" % ALERT_POLICY_V2_SCHEMA_VERSION
+        )
+
+    overrides: dict[str, AlertOverride] = {}
+    for alert_id, override in sorted(value.items()):
+        if alert_id not in ALERT_DEFINITIONS:
+            raise ValueError("Unknown alert ID in desired_alert_overrides: %s" % alert_id)
+        if not isinstance(override, dict):
+            raise ValueError("desired_alert_overrides.%s must be an object" % alert_id)
+        unknown = sorted(set(override) - ALERT_POLICY_SUPPORTED_OVERRIDE_KEYS)
+        unsupported = [key for key in unknown if key in ALERT_POLICY_UNSUPPORTED_OVERRIDE_KEYS]
+        if unsupported:
+            raise ValueError(
+                "desired_alert_overrides.%s has unsupported override key(s): %s"
+                % (alert_id, ", ".join(unsupported))
+            )
+        if unknown:
+            raise ValueError(
+                "desired_alert_overrides.%s has unknown override key(s): %s"
+                % (alert_id, ", ".join(unknown))
+            )
+
+        enabled = override.get("enabled")
+        if enabled is not None and not isinstance(enabled, bool):
+            raise ValueError("desired_alert_overrides.%s.enabled must be boolean" % alert_id)
+        severity = override.get("severity")
+        if severity is not None:
+            if not isinstance(severity, str) or severity not in SEVERITY_RANK:
+                raise ValueError(
+                    "desired_alert_overrides.%s.severity must be one of: %s"
+                    % (alert_id, ", ".join(sorted(SEVERITY_RANK)))
+                )
+        overrides[alert_id] = AlertOverride(enabled=enabled, severity=severity)
+    return overrides
 
 
 def _warning_to_dict(value: Any) -> dict[str, Any]:

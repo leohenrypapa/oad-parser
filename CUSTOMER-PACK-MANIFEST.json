@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-17T21:52:28Z",
+  "generated_at_utc": "2026-06-17T22:21:25Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -244,8 +244,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "5e9460a779073423caed0b9304c8f129026d3cbbaee52bd239f2494074024c60",
-      "size_bytes": 28568
+      "sha256": "f2a82110e3900175f646f296722795ea6a6a5b70efd21af1ebc148fdb1b2f239",
+      "size_bytes": 32704
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-17T21:52:28Z",
+    "generated_at_utc": "2026-06-17T22:21:25Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",
