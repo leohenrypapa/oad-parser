@@ -55,12 +55,12 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T01:29:25Z",
+  "generated_at_utc": "2026-06-18T02:13:02Z",
   "included_files": [
     {
       "path": ".gitignore",
-      "sha256": "425de5d8046cfdec8eadf904f68e5150a4b9b40b54718ab3eb2ec9ebab50ffcf",
-      "size_bytes": 903
+      "sha256": "550ca0875187630b2887583a9dd59013398078e332955e46f4dc5b602ed0e425",
+      "size_bytes": 1513
     },
     {
       "path": "CHANGELOG.md",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T01:29:25Z",
+    "generated_at_utc": "2026-06-18T02:13:02Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",

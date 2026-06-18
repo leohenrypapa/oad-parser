@@ -21,6 +21,13 @@ reports/
 vendor/wheelhouse/
 _debug/
 *.bak-*
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+coverage.xml
+junit*.xml
 
 # OAD parser local/sensitive artifacts
 *.pcap
@@ -61,3 +68,34 @@ operator-ui/.playwright/
 operator-ui/playwright-report/
 operator-ui/test-results/
 operator-ui/blob-report/
+
+# Local AI/Codex assistant artifacts
+/.codex/
+/codex-local/
+/chatgpt-local/
+/ai-local/
+/assistant-local/
+/AGENTS.md
+/docs/AGENTS.md
+/operator-ui/AGENTS.md
+/AGENTS.local.md
+/docs/AGENTS.local.md
+/operator-ui/AGENTS.local.md
+/AI_CONTEXT.md
+/AI_CONTEXT.local.md
+/.ai/
+/prompts.local/
+/scratch.local/
+/scratch.local.md
+/scratchpad.local.md
+/handoff.local.md
+/ai-notes.local.md
+/ai_notes.local.md
+/ai-review.local.md
+/.worktrees/
+/worktrees/
+/wt/
+/docs/templates/chatgpt-codex-site-update-prompt-template.md
+/*.codex.local.*
+/*.chatgpt.local.*
+/*.ai.local.*
