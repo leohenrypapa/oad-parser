@@ -150,7 +150,11 @@ def transform_parse_error_to_legacy_record(
 
     payload = result.payload or b""
     packet_metadata = legacy_error_fields()
-    packet_metadata.update(_packet_fields(_packet_metadata_with_frame_lengths(result), None))
+    result_metadata = _packet_metadata_with_frame_lengths(result)
+    packet_metadata.update(_packet_fields(result_metadata, None))
+    for name in ("artcc", "ecg_message", "router_timestamp", "outer_message_name"):
+        if name in result_metadata:
+            packet_metadata[name] = result_metadata[name]
     packet_metadata.update(
         {
             "parser_validation_accepted": False,

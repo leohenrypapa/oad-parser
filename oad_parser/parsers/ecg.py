@@ -110,6 +110,7 @@ MESSAGE_NAME_BY_CODE = {
 ECG_ERROR_LENGTH_MISMATCH = "ecg_length_mismatch"
 ECG_ERROR_SHORT_PAYLOAD = "ecg_short_payload"
 ECG_ERROR_MESSAGE_BLOCK_TRUNCATED = "ecg_message_block_truncated"
+ECG_REJECT_OUTER_MESSAGE_NOT_SURVEILLANCE = "ecg_outer_message_not_surveillance"
 ECG_WARNING_UNKNOWN_MESSAGE_CODE = "unknown_message_code"
 
 @dataclass(frozen=True)
@@ -391,6 +392,35 @@ def extract_ecg_messages_with_errors(
             ),
             payload=payload,
             packet_metadata=packet_metadata,
+            frame_length_claimed=frame_length_claimed,
+            frame_length_expected=frame_length_expected,
+            frame_length_valid=frame_length_valid,
+        )
+
+    if payload[ECG_MESSAGE_OFFSET] != 1:
+        metadata = dict(packet_metadata)
+        metadata.update(
+            {
+                "artcc": _decode_text(payload[ARTCC_START:ARTCC_END]),
+                "ecg_message": payload[ECG_MESSAGE_OFFSET],
+                "router_timestamp": _read_scaled_uint32(
+                    payload,
+                    ROUTER_TIMESTAMP_START,
+                    ROUTER_TIMESTAMP_END,
+                    ROUTER_TIMESTAMP_SCALE,
+                ),
+                "outer_message_name": "non_surveillance",
+            }
+        )
+        return EcgEnvelopeParseResult(
+            envelopes=[],
+            error=EcgEnvelopeParseIssue(
+                code=ECG_REJECT_OUTER_MESSAGE_NOT_SURVEILLANCE,
+                message="ECG candidate has an outer ECG message value other than surveillance message 1",
+                parser_stage="ecg_envelope",
+            ),
+            payload=payload,
+            packet_metadata=metadata,
             frame_length_claimed=frame_length_claimed,
             frame_length_expected=frame_length_expected,
             frame_length_valid=frame_length_valid,

@@ -19,6 +19,7 @@ from oad_parser.live.classifier import (
 )
 from oad_parser.live.metrics import LiveMetrics
 from oad_parser.parsers.ecg import (
+    ECG_REJECT_OUTER_MESSAGE_NOT_SURVEILLANCE,
     EcgEnvelopeParseResult,
     extract_ecg_messages_with_errors,
 )
@@ -396,12 +397,14 @@ def _with_packet_metadata(
     result: EcgEnvelopeParseResult,
     packet_metadata: Dict[str, Any],
 ) -> EcgEnvelopeParseResult:
+    merged_metadata = dict(result.packet_metadata or {})
+    merged_metadata.update(packet_metadata)
     return EcgEnvelopeParseResult(
         envelopes=result.envelopes,
         error=result.error,
         warnings=result.warnings,
         payload=result.payload,
-        packet_metadata=dict(packet_metadata),
+        packet_metadata=merged_metadata,
         frame_length_claimed=result.frame_length_claimed,
         frame_length_expected=result.frame_length_expected,
         frame_length_valid=result.frame_length_valid,
@@ -414,7 +417,8 @@ def _update_metrics(
     metrics: LiveMetrics,
 ) -> None:
     if result.is_error:
-        metrics.increment("malformed_count")
+        if result.error is None or result.error.code != ECG_REJECT_OUTER_MESSAGE_NOT_SURVEILLANCE:
+            metrics.increment("malformed_count")
         metrics.increment("error_records_emitted", len(records))
         return
 

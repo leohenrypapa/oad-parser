@@ -337,13 +337,15 @@ def evaluate_ecg_parse_error_alerts(
     parser_stage: str,
     config: EcgAlertConfig | None = None,
 ) -> list[dict[str, Any]]:
-    alerts = [
-        make_alert(
-            "ECG-CD2-002",
-            "Malformed ECG/CD2 frame length or message block was observed; parser emitted a rejected-frame record instead of silently dropping it.",
-            _malformed_evidence(record, error_code, error_message, parser_stage),
+    alerts = []
+    if error_code != "ecg_outer_message_not_surveillance":
+        alerts.append(
+            make_alert(
+                "ECG-CD2-002",
+                "Malformed ECG/CD2 frame length or message block was observed; parser emitted a rejected-frame record instead of silently dropping it.",
+                _malformed_evidence(record, error_code, error_message, parser_stage),
+            )
         )
-    ]
     alerts.extend(_checksum_alerts(record, config))
 
     if config is not None:
@@ -389,9 +391,6 @@ def _configured_alerts(
 ) -> list[dict[str, Any]]:
     alerts: list[dict[str, Any]] = []
 
-    if not config.emit_unknown_site_alerts:
-        return alerts
-
     source_tuple = _source_tuple_key(record)
     if config.allowed_source_tuples and source_tuple not in config.allowed_source_tuples:
         alerts.append(
@@ -412,7 +411,7 @@ def _configured_alerts(
             )
         )
 
-    if config.known_sites and (site_id == "unknown" or site_id not in config.known_sites):
+    if config.emit_unknown_site_alerts and config.known_sites and (site_id == "unknown" or site_id not in config.known_sites):
         alerts.append(
             make_alert(
                 "ECG-CD2-007",

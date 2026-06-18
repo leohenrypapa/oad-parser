@@ -192,6 +192,8 @@ Legacy ECG output remains routed by the SIEM owner to dataset radar.oad. OAD ECG
 
 For early operator analysis, OAD uses radar.oad.new on eno2 with normal_record_sample_rate=1, emit_parse_warning_alerts=True, and emit_modec_altitude_missing_alerts=True. The only intentional output suppression allowed in this mode is exact duplicate suppression, which must be reflected by parser.duplicate.* and parser.accounting.* fields. Production sampling and non-actionable-wrapper suppression are deferred until analysts approve the policy.
 
+Field-policy v2 must not alias or remove canonical SIEM event fields, parser accounting fields, accounting snapshot-only fields, `record_type`, event kind/category/action, duplicate fields, hash fields, parser validation fields, dataset/service fields, or `alerts`. Valid ECG candidates with outer `ecg_message != 1` are emitted as compact rejected metadata records with `parser.validation.drop_reason=ecg_outer_message_not_surveillance`; they are collectible parser-validation evidence, not active standalone cyber alerts.
+
 ## Sensor1 dataset split - 2026-06-12
 
 Sensor1 uses a dataset split so operators can compare legacy and OAD output without mixing records.

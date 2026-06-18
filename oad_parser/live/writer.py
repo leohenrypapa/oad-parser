@@ -90,7 +90,7 @@ def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
         raise ValueError("field policy schema_version is not supported")
 
     disabled = _string_sequence(data.get("disabled_fields", []), "disabled_fields")
-    known_fields = set(SIEM_FULL_EVENT_FIELDS) | set(SIEM_OPTIONAL_EVENT_FIELDS)
+    known_fields = set(SIEM_KNOWN_POLICY_FIELDS) | set(SIEM_OPTIONAL_EVENT_FIELDS)
     unknown_fields = sorted(set(disabled) - known_fields)
     if unknown_fields:
         raise ValueError("field policy references unknown field(s): %s" % ", ".join(unknown_fields))
@@ -201,6 +201,7 @@ class _DuplicateKeyAccounting:
 SIEM_EVENT_FIELDS = (
     "@timestamp",
     "event.created",
+    "record_type",
     "event.dataset",
     "data_stream.type",
     "data_stream.dataset",
@@ -265,6 +266,20 @@ SIEM_ACCOUNTING_EVENT_FIELDS = (
     "parser.accounting.duplicate.max_key_count",
 )
 
+SIEM_ACCOUNTING_SNAPSHOT_ONLY_FIELDS = (
+    "parser.accounting.snapshot.reason",
+    "parser.accounting.duplicate.observations",
+    "parser.accounting.duplicate.last_key",
+    "parser.accounting.duplicate.last_key.count",
+)
+
+SIEM_RECORD_CONTRACT_FIELDS = (
+    "record_type",
+    "event.kind",
+    "event.category",
+    "event.action",
+) + SIEM_ACCOUNTING_SNAPSHOT_ONLY_FIELDS
+
 SIEM_FULL_EVENT_FIELDS = (
     SIEM_EVENT_FIELDS[:-1]
     + SIEM_DEBUG_ONLY_EVENT_FIELDS
@@ -275,6 +290,8 @@ SIEM_FULL_EVENT_FIELDS = (
 SIEM_OPTIONAL_EVENT_FIELDS = (
     "event.sample.rate",
 )
+
+SIEM_KNOWN_POLICY_FIELDS = frozenset(SIEM_FULL_EVENT_FIELDS) | frozenset(SIEM_RECORD_CONTRACT_FIELDS)
 
 
 SIEM_FIELD_RENAMES = {
@@ -1182,7 +1199,7 @@ def _validate_field_policy_v2_controls(
     display_labels: Mapping[str, str],
     siem_mapping_notes: Mapping[str, str],
 ) -> None:
-    protected_fields = set(SIEM_EVENT_FIELDS)
+    protected_fields = set(SIEM_EVENT_FIELDS) | set(SIEM_ACCOUNTING_EVENT_FIELDS) | set(SIEM_RECORD_CONTRACT_FIELDS)
     disabled_set = set(disabled)
     unknown_order = sorted(set(desired_order) - known_fields)
     unknown_labels = sorted(set(display_labels) - known_fields)
