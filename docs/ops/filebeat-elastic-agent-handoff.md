@@ -132,7 +132,7 @@ Check local status:
 
 Check service logs for one interface:
 
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 ## Handoff validation checklist
 

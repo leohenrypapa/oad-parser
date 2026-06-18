@@ -18,7 +18,7 @@ The template runs:
 
     /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
 
-The `%i` token is the systemd instance name. For example, `ecg-parser@eno1.service` runs the live parser for interface `eno1`.
+The `%i` token is the systemd instance name. For example, `ecg-parser@eno2.service` runs the live parser for interface `eno2`.
 
 ## Runtime user
 
@@ -30,7 +30,7 @@ Reason: Linux raw socket capture normally requires root privileges or equivalent
 
 Expected live parser instances are interface-specific, for example:
 
-    ecg-parser@eno1.service
+    ecg-parser@eno2.service
     ecg-parser@eno2.service
     ecg-parser@eno3.service
     ecg-parser@eno4.service
@@ -63,44 +63,44 @@ Reload systemd:
 
 ## Start one interface
 
-Start `eno1`:
+Start `eno2`:
 
-    sudo systemctl start ecg-parser@eno1.service
+    sudo systemctl start ecg-parser@eno2.service
 
 Check status:
 
-    sudo systemctl status ecg-parser@eno1.service --no-pager
+    sudo systemctl status ecg-parser@eno2.service --no-pager
 
 View logs:
 
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 ## Enable one interface at boot
 
-Enable `eno1`:
+Enable `eno2`:
 
-    sudo systemctl enable ecg-parser@eno1.service
+    sudo systemctl enable ecg-parser@eno2.service
 
 Start after enabling:
 
-    sudo systemctl start ecg-parser@eno1.service
+    sudo systemctl start ecg-parser@eno2.service
 
 ## Stop one interface
 
-Stop `eno1`:
+Stop `eno2`:
 
-    sudo systemctl stop ecg-parser@eno1.service
+    sudo systemctl stop ecg-parser@eno2.service
 
 Disable at boot:
 
-    sudo systemctl disable ecg-parser@eno1.service
+    sudo systemctl disable ecg-parser@eno2.service
 
 ## Uninstall and rollback
 
 Stop and disable the interface instance:
 
-    sudo systemctl stop ecg-parser@eno1.service
-    sudo systemctl disable ecg-parser@eno1.service
+    sudo systemctl stop ecg-parser@eno2.service
+    sudo systemctl disable ecg-parser@eno2.service
 
 Remove the template unit and reload systemd:
 
@@ -121,7 +121,7 @@ Do not use `--max-frames` in the production systemd template.
 
 `--max-frames` is only for test and smoke runs such as:
 
-    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 10
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno2 --max-frames 10
 
 ## Restart behavior
 
@@ -151,20 +151,20 @@ The live parser uses these default runtime files:
 After installation, use:
 
     sudo systemctl daemon-reload
-    systemctl cat ecg-parser@eno1.service
-    sudo systemctl start ecg-parser@eno1.service
-    sudo systemctl status ecg-parser@eno1.service --no-pager
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    systemctl cat ecg-parser@eno2.service
+    sudo systemctl start ecg-parser@eno2.service
+    sudo systemctl status ecg-parser@eno2.service --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 For a non-production smoke run without systemd:
 
-    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno2 --max-frames 0
 
 ## Sprint 2 target validation boundary
 
 The systemd template service is implemented at `deploy/systemd/ecg-parser@.service`.
 
-Target validation may document `eno1` through `eno5`, but pass/fail validation applies only to connected ECG interfaces. For example, `ecg-parser@eno1.service` is valid only when `eno1` is the selected connected ECG interface.
+Target validation may document `eno1` through `eno5`, but pass/fail validation applies only to connected ECG interfaces. For example, `ecg-parser@eno2.service` is valid only when `eno2` is the selected connected ECG interface.
 
 Systemd validation must confirm:
 
@@ -178,7 +178,7 @@ Systemd validation must confirm:
 
 Use `docs/release/target-environment-validation.md` for the target Oracle Linux Server 9.6 validation checklist.
 
-The checklist covers Python 3.9.2, root runtime, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection, `eno1` through `eno5` examples, `ecg-parser@enoX.service` start/status/stop checks, output file checks, storage behavior validation, and evidence that must not be committed.
+The checklist covers Python 3.9.2, root runtime, `/etc/oad-parser/ecg_conf.ini`, `/nsm/ecg`, connected ECG interface selection, current release `eno2` example plus site-approved alternate interface examples, `ecg-parser@enoX.service` start/status/stop checks, output file checks, storage behavior validation, and evidence that must not be committed.
 
 ### Live MVP detection-scope note
 

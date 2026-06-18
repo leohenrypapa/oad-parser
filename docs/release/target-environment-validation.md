@@ -43,23 +43,23 @@ Install and inspect the unit:
 
     sudo install -m 0644 deploy/systemd/ecg-parser@.service /etc/systemd/system/ecg-parser@.service
     sudo systemctl daemon-reload
-    systemctl cat ecg-parser@eno1.service
+    systemctl cat ecg-parser@eno2.service
 
 Start only an approved connected interface:
 
-    sudo systemctl start ecg-parser@eno1.service
-    sudo systemctl status ecg-parser@eno1.service --no-pager
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo systemctl start ecg-parser@eno2.service
+    sudo systemctl status ecg-parser@eno2.service --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 Stop after validation if directed:
 
-    sudo systemctl stop ecg-parser@eno1.service
+    sudo systemctl stop ecg-parser@eno2.service
 
 ## Bounded non-production smoke check
 
 When approved, a bounded smoke check may be run outside production systemd operation:
 
-    sudo /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 1
+    sudo /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno2 --max-frames 1
 
 ## Evidence to collect
 

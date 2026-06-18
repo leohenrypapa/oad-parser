@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T12:51:57Z",
+  "generated_at_utc": "2026-06-18T15:21:24Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -74,13 +74,13 @@
     },
     {
       "path": "START_HERE.md",
-      "sha256": "7ab645e4f098c62330cd25fa06175d24bb32a0f9b12b1b3d09d3f0deeb412de7",
-      "size_bytes": 2093
+      "sha256": "8d4ec2f81fc4a0d7ba963db459fb76a7cc39e840a5e22a8356d6205f8eb6d6eb",
+      "size_bytes": 2333
     },
     {
       "path": "USER_MANUAL.md",
-      "sha256": "f6977682f31db23092c2062415a3e29b317ee9107b93943890bf880a594ca208",
-      "size_bytes": 2519
+      "sha256": "c849d12668411536f631320db4585be0bfb02991b6e6a6b884a24719849f8929",
+      "size_bytes": 2682
     },
     {
       "path": "config/ecg-alerts.example.json",
@@ -109,23 +109,23 @@
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "dfc0ad9f73664e3abd5447f5fa13cdfee33c076bc86a3f8e3d30aea18433241f",
+      "sha256": "e23b278bbad6b5a9198b765b1cbe70aba640e09fbd19eac1a9bcc6750d99c038",
       "size_bytes": 2774
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "836d43f72eb941ab9556726acf38e93aec910ee82bb37c76e6467f42919ba128",
+      "sha256": "89d0c01f5a2e63a1fc626248a0420888da30176add6778dacf680140427c5202",
       "size_bytes": 8119
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "e6b4f56fe48f827b82a8f342bef909412da21a9a49838a6d6e89aac692b1f4e2",
-      "size_bytes": 8930
+      "sha256": "e85d1a3dffd9d56df94fc99609c15483c74ce7026b8293d005bada176d5e7b80",
+      "size_bytes": 8978
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
-      "sha256": "43d2a56f9643589c81697d558a53f28db6dff58c6f5679bf5ebf450e372be787",
-      "size_bytes": 3074
+      "sha256": "12bc6299eb845489f69b48b0f88123e927ba29082dba05221303f903449cf20d",
+      "size_bytes": 4426
     },
     {
       "path": "docs/release/CUSTOMER_PACK_POLICY.md",
@@ -139,7 +139,7 @@
     },
     {
       "path": "docs/release/target-environment-validation.md",
-      "sha256": "633ef39d3b435392bd4f8302ea22d6fbf0356f6027f24acdfa1f30f6c80e4608",
+      "sha256": "d45b4602fdcb3aa1aa2d45e1d65a21a32aaac868c1849ca43dfe9a9e677426d5",
       "size_bytes": 3115
     },
     {
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T12:51:57Z",
+    "generated_at_utc": "2026-06-18T15:21:24Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",

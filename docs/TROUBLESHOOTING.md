@@ -47,7 +47,7 @@ If site authority approves replacement on interface `eno4`, stop the legacy serv
 
 Check the installed service command:
 
-    systemctl cat ecg-parser@eno1.service
+    systemctl cat ecg-parser@eno2.service
 
 Expected interpreter:
 
@@ -55,7 +55,7 @@ Expected interpreter:
 
 Check logs:
 
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 ## Configuration missing or invalid
 
@@ -84,6 +84,6 @@ Optional observability files appear only when explicitly enabled:
 
 A non-production smoke check can run with max frames set to zero:
 
-    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno2 --max-frames 0
 
 Do not add --max-frames to the production systemd template.

@@ -26,17 +26,17 @@ Use the installed interpreter for customer runtime commands:
     /opt/oad-parser/venv/bin/python -m oad_parser extract-ecg-messages APPROVED_INPUT.pcap --jsonl
     /opt/oad-parser/venv/bin/python -m oad_parser decode-cd2-words 0x100 0x101 0x102
     /opt/oad-parser/venv/bin/python -m oad_parser validate ./oad-output.jsonl
-    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno1 --max-frames 0
+    /opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface eno2 --max-frames 0
 
 Use only approved, non-sensitive local inputs for troubleshooting.
 
 ## Live service
 
-The systemd template runs one service instance per interface:
+The systemd template runs one service instance per interface. For the current customer/site release, use `eno2` unless a site-approved change record says otherwise:
 
-    sudo systemctl start ecg-parser@eno1.service
-    sudo systemctl status ecg-parser@eno1.service --no-pager
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo systemctl start ecg-parser@eno2.service
+    sudo systemctl status ecg-parser@eno2.service --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 Production systemd service commands must not add --max-frames. That option is only for bounded smoke runs outside production service operation.
 
@@ -46,7 +46,7 @@ Production systemd service commands must not add --max-frames. That option is on
 - /var/log/oad-parser/ecg-audit.jsonl is optional audit output only when observability is explicitly enabled.
 - /run/oad-parser/ecg-status.json is optional local status output only when observability is explicitly enabled.
 
-The default customer/operator handoff writes only /nsm/ecg/ecg-current.json under /nsm/ecg.
+The default customer/operator handoff writes only /nsm/ecg/ecg-current.json under /nsm/ecg. The current release dataset expectation is `radar.oad.new`.
 
 ## Troubleshooting
 

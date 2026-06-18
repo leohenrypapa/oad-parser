@@ -43,14 +43,15 @@ Confirm these target paths before starting the service:
 - /etc/oad-parser/ecg_conf.ini exists and is site-appropriate.
 - /nsm/ecg exists with approved ownership and permissions.
 - The selected interface is connected to approved ECG UDP/IPv4 radar traffic.
+- For the current customer/site release, the expected sensor interface is `eno2`, the systemd instance is `ecg-parser@eno2.service`, the OAD dataset is `radar.oad.new`, and the handoff file is `/nsm/ecg/ecg-current.json`.
 
 ## 6. Start one interface
 
-Example for eno1:
+Current release example for `eno2`:
 
-    sudo systemctl start ecg-parser@eno1.service
-    sudo systemctl status ecg-parser@eno1.service --no-pager
-    sudo journalctl -u ecg-parser@eno1.service -n 100 --no-pager
+    sudo systemctl start ecg-parser@eno2.service
+    sudo systemctl status ecg-parser@eno2.service --no-pager
+    sudo journalctl -u ecg-parser@eno2.service -n 100 --no-pager
 
 Only start interfaces that are physically present and approved for the site.
 
