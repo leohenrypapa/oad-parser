@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T05:57:12Z",
+  "generated_at_utc": "2026-06-18T11:42:30Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T05:57:12Z",
+    "generated_at_utc": "2026-06-18T11:42:30Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",
