@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T18:12:09Z",
+  "generated_at_utc": "2026-06-18T18:23:49Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -114,8 +114,8 @@
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "8b19c9b35cf9b87d886def56e25ad78784d677519c0529dbfa3d7a0694f8722a",
-      "size_bytes": 8060
+      "sha256": "26beb5d3974baf4e79cf8a8c4f6e6229da3fbdfe4891a33c79dadfe4df2002fe",
+      "size_bytes": 8503
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
@@ -284,8 +284,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "c6d20cdfbed37fb9f3b9062354e3d8692af88f68387a5ca243e1f23a479f3f1e",
-      "size_bytes": 52821
+      "sha256": "96b4068bd9d289bd52304bdf4b9a4a609269b836dc00e6aff1b739384efe0817",
+      "size_bytes": 53353
     },
     {
       "path": "oad_parser/models.py",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T18:12:09Z",
+    "generated_at_utc": "2026-06-18T18:23:49Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",

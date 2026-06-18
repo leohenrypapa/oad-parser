@@ -277,6 +277,13 @@ SIEM_FULL_EVENT_FIELDS = (
 
 SIEM_OPTIONAL_EVENT_FIELDS = (
     "event.sample.rate",
+    "data_stream.type",
+    "data_stream.dataset",
+)
+
+SIEM_DEFAULT_DISABLED_EVENT_FIELDS = (
+    "data_stream.type",
+    "data_stream.dataset",
 )
 
 SIEM_KNOWN_POLICY_FIELDS = frozenset(SIEM_FULL_EVENT_FIELDS) | frozenset(SIEM_RECORD_CONTRACT_FIELDS)
@@ -374,7 +381,7 @@ class RotatingJsonlWriter:
         self.data_stream_dataset = data_stream_dataset
         self.event_dataset = event_dataset
         self.service_name = service_name
-        self.field_policy = field_policy
+        self.field_policy = field_policy if field_policy is not None else default_field_policy()
         self._normal_event_counter = 0
         self._records_seen = 0
         self._records_emitted = 0
@@ -1156,6 +1163,14 @@ def _field_policy_controls_order(policy: Optional[FieldPolicy]) -> bool:
     return bool(policy and policy.schema_version == FIELD_POLICY_V2_SCHEMA_VERSION and policy.desired_order)
 
 
+def default_field_policy() -> FieldPolicy:
+    return FieldPolicy(
+        schema_version=FIELD_POLICY_V2_SCHEMA_VERSION,
+        policy_name="default SIEM-managed data stream fields",
+        disabled_fields=frozenset(SIEM_DEFAULT_DISABLED_EVENT_FIELDS),
+    )
+
+
 def _string_sequence(value: object, field_name: str) -> tuple[str, ...]:
     if value is None:
         return ()
@@ -1190,7 +1205,11 @@ def _validate_field_policy_v2_controls(
     display_labels: Mapping[str, str],
     siem_mapping_notes: Mapping[str, str],
 ) -> None:
-    protected_fields = set(SIEM_EVENT_FIELDS) | set(SIEM_ACCOUNTING_EVENT_FIELDS) | set(SIEM_RECORD_CONTRACT_FIELDS)
+    protected_fields = (
+        (set(SIEM_EVENT_FIELDS) - set(SIEM_OPTIONAL_EVENT_FIELDS))
+        | set(SIEM_ACCOUNTING_EVENT_FIELDS)
+        | set(SIEM_RECORD_CONTRACT_FIELDS)
+    )
     disabled_set = set(disabled)
     unknown_order = sorted(set(desired_order) - known_fields)
     unknown_labels = sorted(set(display_labels) - known_fields)

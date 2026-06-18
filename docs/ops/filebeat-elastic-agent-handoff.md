@@ -167,14 +167,14 @@ emit_modec_altitude_missing_alerts = False
 
 ## 2026-06-12 operator comparison dataset update
 
-Legacy ECG output remains routed by the SIEM owner to dataset radar.oad. OAD ECG output must identify itself as dataset radar.oad.new using data_stream.dataset and event.dataset so operators can compare the two streams without mixing records. The parser-owned default event file remains /nsm/ecg/ecg-current.json. SIEM routing, namespace, and index or data-stream creation remain SIEM-owner responsibilities.
+Legacy ECG output remains routed by the SIEM owner to dataset radar.oad. OAD ECG output must identify itself as dataset radar.oad.new using `event.dataset` so operators can compare the two streams without mixing records. `data_stream.type` and `data_stream.dataset` are SIEM-managed fields and are suppressed by the parser default field policy unless an explicit target field policy re-enables them. The parser-owned default event file remains /nsm/ecg/ecg-current.json. SIEM routing, namespace, and index or data-stream creation remain SIEM-owner responsibilities.
 
 
 ## Mode 1 analysis policy
 
 For early operator analysis, OAD uses radar.oad.new on eno2 with normal_record_sample_rate=1, emit_parse_warning_alerts=True, and emit_modec_altitude_missing_alerts=True. The only intentional output suppression allowed in this mode is exact duplicate suppression, which must be reflected by parser.duplicate.* and parser.accounting.* fields. Production sampling and non-actionable-wrapper suppression are deferred until analysts approve the policy.
 
-Field-policy v2 must not alias or remove canonical SIEM event fields, parser accounting fields, accounting snapshot-only fields, `record_type`, event kind/category/action, duplicate fields, hash fields, parser validation fields, dataset/service fields, or `alerts`. Valid ECG candidates with outer `ecg_message != 1` are emitted as compact rejected metadata records with `parser.validation.drop_reason=ecg_outer_message_not_surveillance`; they are collectible parser-validation evidence, not active standalone cyber alerts.
+Field-policy v2 must not alias or remove canonical SIEM event fields, parser accounting fields, accounting snapshot-only fields, `record_type`, event kind/category/action, duplicate fields, hash fields, parser validation fields, `event.dataset`, `service.name`, or `alerts`. `data_stream.type` and `data_stream.dataset` are optional SIEM-managed fields. Valid ECG candidates with outer `ecg_message != 1` are emitted as compact rejected metadata records with `parser.validation.drop_reason=ecg_outer_message_not_surveillance`; they are collectible parser-validation evidence, not active standalone cyber alerts.
 
 ## Sensor1 dataset split - 2026-06-12
 
@@ -187,10 +187,10 @@ Sensor1 uses a dataset split so operators can compare legacy and OAD output with
 
 OAD records must include:
 
-- data_stream.type = logs
-- data_stream.dataset = radar.oad.new
 - event.dataset = radar.oad.new
 - service.name = oad-ecg-parser
 - observer.ingress.interface = eno2
+
+If `data_stream.type` or `data_stream.dataset` appear because a target field policy re-enabled them, they must match `logs` and `radar.oad.new` respectively. The repo default parser output omits them because the downstream SIEM can supply data-stream metadata.
 
 Target-side JSON validation proves OAD emits these fields. It does not prove Elastic or Fleet ingestion. SIEM-side confirmation must be performed by an operator or SIEM engineer.
