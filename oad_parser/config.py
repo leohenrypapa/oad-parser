@@ -83,6 +83,7 @@ class LiveParserConfig:
     check_time_delta: bool = True
     check_fingerprint: bool = True
     output_status: bool = DEFAULT_LIVE_OUTPUT_STATUS
+    output_status_requested: bool = DEFAULT_LIVE_OUTPUT_STATUS
 
     interface: str = DEFAULT_LIVE_INTERFACE
     mode: str = DEFAULT_LIVE_MODE
@@ -91,6 +92,7 @@ class LiveParserConfig:
     event_dataset: str = DEFAULT_LIVE_EVENT_DATASET
     service_name: str = DEFAULT_LIVE_SERVICE_NAME
     rotation_enabled: bool = DEFAULT_LIVE_ROTATION_ENABLED
+    rotation_enabled_requested: bool = DEFAULT_LIVE_ROTATION_ENABLED
     rotate_seconds: int = DEFAULT_LIVE_ROTATE_SECONDS
     rotate_max_bytes: int = DEFAULT_LIVE_ROTATE_MAX_BYTES
     receive_buffer_bytes: int = DEFAULT_LIVE_RECEIVE_BUFFER_BYTES
@@ -258,7 +260,13 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
             "check_fingerprint",
             fallback=config.check_fingerprint,
         )
-        config.output_status = parser.getboolean("Options", "output_status", fallback=config.output_status)
+        requested_status = parser.getboolean(
+            "Options",
+            "output_status",
+            fallback=config.output_status_requested,
+        )
+        config.output_status_requested = requested_status
+        config.output_status = False
         config.siem_debug_evidence = parser.getboolean("Options", "siem_debug_evidence", fallback=config.siem_debug_evidence)
 
     if parser.has_section("Live"):
@@ -267,7 +275,13 @@ def load_live_parser_config(path: str | Path | None) -> LiveParserConfig:
                 parser.get("Live", "interface", fallback=None)
             ) or ""
         config.mode = _get_string(parser, "Live", "mode", config.mode)
-        config.rotation_enabled = parser.getboolean("Live", "rotation_enabled", fallback=config.rotation_enabled)
+        requested_rotation = parser.getboolean(
+            "Live",
+            "rotation_enabled",
+            fallback=config.rotation_enabled_requested,
+        )
+        config.rotation_enabled_requested = requested_rotation
+        config.rotation_enabled = False
         config.rotate_seconds = parser.getint("Live", "rotate_seconds", fallback=config.rotate_seconds)
         config.rotate_max_bytes = parser.getint("Live", "rotate_max_bytes", fallback=config.rotate_max_bytes)
         config.receive_buffer_bytes = parser.getint(

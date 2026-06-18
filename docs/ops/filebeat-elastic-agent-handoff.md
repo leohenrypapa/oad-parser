@@ -13,16 +13,16 @@ This repository does not provide site-specific Elastic Agent, Filebeat, or Logst
 
 ## MVP collection scope
 
-MVP central collection uses append-style files only:
+MVP central collection uses one append-style file:
 
     /nsm/ecg/ecg-current.json
+
+The target parser does not create these legacy compatibility sidecar paths:
+
     /var/log/oad-parser/ecg-audit.jsonl
-
-Do not centrally collect this local-only file for MVP:
-
     /run/oad-parser/ecg-status.json
 
-`ecg-status.json` is replaced as one local JSON object for operator checks. If central status ingestion is required later, add status snapshots to `ecg-audit.jsonl` or add a separate append-style `ecg-status.jsonl`.
+If central status ingestion is required later, add a new append-style status stream through an approved change.
 
 ## Active event output
 
@@ -39,29 +39,14 @@ Parser records may include:
 
 Valid ECG events may include a `parse_warnings` list. Warnings do not convert the event into `ecg_parse_error`.
 
-## Audit output
+## Legacy audit/status compatibility paths
 
-The audit output file is:
+The config schema retains legacy path keys:
 
     /var/log/oad-parser/ecg-audit.jsonl
-
-This file is JSON Lines. Each line is one complete JSON object with `record_type` equal to `ecg_audit`.
-
-Audit is intended for aggregate operational evidence such as startup, shutdown, storage pruning, writer block, critical storage, and status-summary style events. The parser should not emit one audit record per parse warning by default.
-
-`config/ecg_conf.example.ini` defaults `output_status = False`. In that evidence-first default, audit JSONL is not created unless status/audit observability is explicitly enabled. The required default parser-owned handoff evidence remains `/nsm/ecg/ecg-current.json`, including final `parser_accounting` snapshots.
-
-## Local status output
-
-The local status file is:
-
     /run/oad-parser/ecg-status.json
 
-This is a single JSON object replaced by the parser. It is not JSON Lines and is not part of MVP central collection.
-
-The status file is intended for local operator inspection.
-
-Operator UI readiness and runbooks must not require `/run/oad-parser/ecg-status.json` for the default parser config. When `output_status=True`, status snapshots include last packet time, last status time, idle age, frames processed, counters, disk percent, and storage state for local unattended-operation checks.
+The live parser loader parses those keys for backward compatibility, but target runtime forces `output_status` off and does not create audit/status sidecars. Operator UI readiness and runbooks must not require those files.
 
 ## Rotation and pruning behavior
 
@@ -69,19 +54,19 @@ The active event output remains:
 
     /nsm/ecg/ecg-current.json
 
-Closed rotated event files use UTC timestamped JSONL names:
+Older designs used UTC timestamped rotated JSONL names:
 
     /nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ.jsonl
 
-If a rotated filename already exists, a numeric suffix is appended:
+If a rotated filename already existed, a numeric suffix was appended:
 
     /nsm/ecg/ecg-current-YYYYmmddTHHMMSSZ-0001.jsonl
 
-Storage protection prunes only closed rotated output files. It must not delete:
+The target live parser loader parses rotation settings for compatibility, but forces `rotation_enabled` off. The parser must not create rotated JSONL files on the target.
+
+Storage protection must not delete:
 
     /nsm/ecg/ecg-current.json
-    /var/log/oad-parser/ecg-audit.jsonl
-    /run/oad-parser/ecg-status.json
     unrelated operator files
 
 ## Parser and SIEM ownership boundary
@@ -89,14 +74,12 @@ Storage protection prunes only closed rotated output files. It must not delete:
 Parser-owned behavior:
 
     Create append-style event JSONL records
-    Create append-style audit JSONL records
-    Maintain local status JSON
-    Rotate and prune closed parser output files
+    Keep parser-owned target output limited to /nsm/ecg/ecg-current.json
     Avoid secrets, raw operational payload dumps, and site-specific values in repository docs
 
 Filebeat or Elastic Agent owned behavior:
 
-    Tail append-style files
+    Tail /nsm/ecg/ecg-current.json
     Track file offsets
     Forward records downstream
     Apply site-managed certificates, endpoints, credentials, and enrollment settings
@@ -126,13 +109,11 @@ Check active output is JSON Lines:
 
     sudo tail -n 5 /nsm/ecg/ecg-current.json
 
-Check audit output is JSON Lines:
+Check sidecars are absent:
 
-    sudo tail -n 20 /var/log/oad-parser/ecg-audit.jsonl
-
-Check local status:
-
-    sudo cat /run/oad-parser/ecg-status.json
+    test ! -e /var/log/oad-parser/ecg-audit.jsonl
+    test ! -e /run/oad-parser/ecg-status.json
+    test -z "$(find /nsm/ecg -maxdepth 1 -name 'ecg-current-*.jsonl' -print -quit)"
 
 Check service logs for one interface:
 
@@ -144,21 +125,18 @@ Before enabling central collection, verify:
 
     /nsm/ecg/ecg-current.json exists or will be created by live service
     /nsm/ecg/ecg-current.json is parsed as JSON Lines, not as one JSON document
-    /var/log/oad-parser/ecg-audit.jsonl is parsed as JSON Lines
-    /run/oad-parser/ecg-status.json is not configured for MVP central collection
+    /var/log/oad-parser/ecg-audit.jsonl is not created by the target parser
+    /run/oad-parser/ecg-status.json is not created by the target parser
+    /nsm/ecg/ecg-current-*.jsonl rotated archives are not created by the target parser
     downstream Logstash ownership and index routing are documented outside this repository
     no secrets or site-specific endpoints are committed to this repository
 
 ## Sprint 2 SIEM handoff boundary
 
-The parser owns these output files:
+The parser owns this output file:
 
 - `/nsm/ecg/ecg-current.json`
   - JSON Lines active output despite the `.json` suffix.
-- `/var/log/oad-parser/ecg-audit.jsonl`
-  - Audit JSON Lines.
-- `/run/oad-parser/ecg-status.json`
-  - Local status snapshot; not the primary MVP central collection stream.
 
 Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but final version and site-specific configuration must be confirmed by the SIEM owner. Do not commit SIEM endpoints, tokens, certificates, private keys, hostnames, IPs, index names, or other site-specific values.
 
@@ -166,11 +144,11 @@ Filebeat/Elastic Agent 8.17.3 remains the expected customer assumption, but fina
 
 Use `docs/release/target-environment-validation.md` during target handoff.
 
-The parser owns the default SIEM handoff file `/nsm/ecg/ecg-current.json`; audit and status files are disabled for the operator default and, when explicitly enabled, should use non-handoff paths such as `/var/log/oad-parser` and `/run/oad-parser`. The SIEM owner owns Filebeat/Elastic Agent version confirmation, endpoint, index, certificate, token, pipeline, and deployment configuration. Filebeat/Elastic Agent 8.17.3 remains the expected assumption until the SIEM owner confirms the final site version and configuration.
+The parser owns the default SIEM handoff file `/nsm/ecg/ecg-current.json`; audit/status sidecars and rotated archives are forced off by the target runtime. The SIEM owner owns Filebeat/Elastic Agent version confirmation, endpoint, index, certificate, token, pipeline, and deployment configuration. Filebeat/Elastic Agent 8.17.3 remains the expected assumption until the SIEM owner confirms the final site version and configuration.
 
 ## ECG SIEM handoff contract
 
-The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.
+The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation and audit/status sidecars are forced off by the target parser runtime.
 
 ## 2026-06-12 ECG output-volume tuning update
 

@@ -9,7 +9,6 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-import tempfile
 from typing import Callable, Dict, Mapping, Optional, Sequence
 
 from oad_parser.config import (
@@ -130,17 +129,10 @@ def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
 
 
 class _DuplicateKeyAccounting:
-    """Exact duplicate-key counts with bounded Python memory.
-
-    The SQLite table holds per-key counts on disk. The live writer keeps only
-    scalar totals in memory, so event emission is immediate and does not buffer
-    already-emitted records while still supporting exact duplicate suppression.
-    """
+    """Exact duplicate-key counts without creating target-side temp files."""
 
     def __init__(self) -> None:
-        self._tempdir = tempfile.TemporaryDirectory(prefix="oad-duplicate-keys-")
-        self._db_path = Path(self._tempdir.name) / "keys.sqlite"
-        self._connection = sqlite3.connect(str(self._db_path), isolation_level=None)
+        self._connection = sqlite3.connect(":memory:", isolation_level=None)
         self._connection.execute("pragma synchronous=off")
         self._connection.execute("pragma journal_mode=memory")
         self._connection.execute(
@@ -186,10 +178,6 @@ class _DuplicateKeyAccounting:
         if connection is not None:
             connection.close()
             self._connection = None
-        tempdir = getattr(self, "_tempdir", None)
-        if tempdir is not None:
-            tempdir.cleanup()
-            self._tempdir = None
 
     def __del__(self) -> None:
         try:

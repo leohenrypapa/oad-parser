@@ -11,8 +11,6 @@ Type=simple
 User=root
 Group=root
 Environment=PYTHONUNBUFFERED=1
-RuntimeDirectory=oad-parser
-LogsDirectory=oad-parser
 ExecStartPre=/usr/bin/test -d /nsm/ecg
 ExecStartPre=/usr/bin/test -r /etc/oad-parser/ecg_conf.ini
 ExecStart=/opt/oad-parser/venv/bin/python -m oad_parser live --config /etc/oad-parser/ecg_conf.ini --interface %i
@@ -24,7 +22,7 @@ NoNewPrivileges=false
 CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
 AmbientCapabilities=CAP_NET_RAW
 ProtectSystem=strict
-ReadWritePaths=/nsm/ecg /var/log/oad-parser /run/oad-parser
+ReadWritePaths=/nsm/ecg
 ProtectHome=true
 PrivateTmp=true
 ProtectKernelTunables=true

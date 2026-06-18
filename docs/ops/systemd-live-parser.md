@@ -136,7 +136,7 @@ This allows systemd to mark the service failed when the parser exits nonzero, wh
 
 ## Shutdown behavior
 
-The live parser handles `SIGTERM` and `SIGINT` as graceful stop requests. On a systemd stop, the raw socket receive loop wakes on its idle poll interval, the live service exits with `stop_requested`, and the CLI appends the final parser accounting snapshot before process exit. When `output_status=True`, the service also writes final audit and status records from its shutdown `finally` path.
+The live parser handles `SIGTERM` and `SIGINT` as graceful stop requests. On a systemd stop, the raw socket receive loop wakes on its idle poll interval, the live service exits with `stop_requested`, and the CLI appends the final parser accounting snapshot to the active SIEM JSON file before process exit.
 
 Idle interfaces still emit wall-clock status heartbeats and continue storage checks while no packets arrive. Status snapshots include last packet time, last status time, idle age, frames processed, counters, and storage state when status output is enabled.
 
@@ -146,27 +146,21 @@ The unit keeps the root runtime and `CAP_NET_RAW` capture capability required fo
 
     ExecStartPre=/usr/bin/test -d /nsm/ecg
     ExecStartPre=/usr/bin/test -r /etc/oad-parser/ecg_conf.ini
-    RuntimeDirectory=oad-parser
-    LogsDirectory=oad-parser
     ProtectSystem=strict
-    ReadWritePaths=/nsm/ecg /var/log/oad-parser /run/oad-parser
+    ReadWritePaths=/nsm/ecg
     RestrictAddressFamilies=AF_PACKET AF_INET AF_INET6 AF_UNIX
 
 Do not remove `CAP_NET_RAW` or `AF_PACKET`; doing so prevents raw packet capture.
 
 ## Runtime files
 
-The live parser uses these default runtime files:
+The target live parser owns one default runtime output file:
 
     /nsm/ecg/ecg-current.json
-    /var/log/oad-parser/ecg-audit.jsonl
-    /run/oad-parser/ecg-status.json
 
 `ecg-current.json` keeps the `.json` suffix for legacy/runtime familiarity, but it is JSON Lines: one JSON object per line.
 
-`ecg-status.json` is local-only for MVP operator inspection.
-
-The evidence-first default parser output is `/nsm/ecg/ecg-current.json` plus final `parser_accounting` snapshots. `config/ecg_conf.example.ini` keeps `output_status = False`, so `/var/log/oad-parser/ecg-audit.jsonl` and `/run/oad-parser/ecg-status.json` are optional local observability outputs, not mandatory default handoff files. Enable `output_status=True` when unattended field operation requires local audit/status files.
+The live config loader parses legacy `output_status` and `rotation_enabled` requests for visibility, then forces both effective values off. The target parser does not write `/var/log/oad-parser/ecg-audit.jsonl`, `/run/oad-parser/ecg-status.json`, or rotated `/nsm/ecg/ecg-current-*.jsonl` files.
 
 ## Verification
 
@@ -193,8 +187,7 @@ Systemd validation must confirm:
 - `/etc/oad-parser/ecg_conf.ini` exists and is site-appropriate.
 - `/nsm/ecg` exists with correct ownership and permissions.
 - `/nsm/ecg/ecg-current.json` is written as JSON Lines despite the `.json` suffix.
-- `/var/log/oad-parser/ecg-audit.jsonl` is written as audit JSON Lines.
-- `/run/oad-parser/ecg-status.json` is written as the local status snapshot.
+- `/var/log/oad-parser/ecg-audit.jsonl`, `/run/oad-parser/ecg-status.json`, and rotated `/nsm/ecg/ecg-current-*.jsonl` files are not created by the target parser.
 
 ## Target-environment validation checklist reference
 
@@ -208,11 +201,11 @@ The `oad_parser live` service currently emits parser/transformer records and ser
 
 ### Live record metadata fields
 
-Live JSONL, audit, and status records include `parser_name`, `parser_version`, `record_schema_version`, and `package_profile`. These fields identify the parser release and live-record schema for operator troubleshooting and SIEM ingestion mapping. They do not certify target-site validation or authoritative OAD semantic decoding.
+Live JSONL records include `parser_name`, `parser_version`, `record_schema_version`, and `package_profile`. These fields identify the parser release and live-record schema for operator troubleshooting and SIEM ingestion mapping. They do not certify target-site validation or authoritative OAD semantic decoding.
 
 ## ECG SIEM handoff contract
 
-The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation is disabled by default, and audit/status files are not written under /nsm/ecg by default. Enable rotation or observability only by explicit config.
+The default live ECG operator handoff is a single newline-delimited JSON file at /nsm/ecg/ecg-current.json. The .json suffix is retained for the legacy/operator path, but each line is one JSON object. Rotation and audit/status sidecars are forced off by the target parser runtime.
 
 ## 2026-06-12 ECG output-volume tuning update
 
