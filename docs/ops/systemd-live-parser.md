@@ -197,7 +197,7 @@ The checklist covers Python 3.9.2, root runtime, `/etc/oad-parser/ecg_conf.ini`,
 
 ### Live MVP detection-scope note
 
-The `oad_parser live` service currently emits parser/transformer records and service health telemetry. Detection configuration flags such as `check_range`, `check_altitude`, `check_azimuth`, `check_site_discovery`, `check_time_delta`, and `check_fingerprint` are retained for parser-profile compatibility and offline/corpus workflows, but they are not an operational live-alerting authority in this pre-site release. Treat live `alert` and `alert_details` fields as legacy-compatible placeholders unless a later release explicitly wires and validates `DetectionEngine` behavior against approved evidence.
+The `oad_parser live` service emits parser/transformer records, service health telemetry, and the repo default legacy-compatible sequence/time alert policy when no alert JSON is installed. Detection configuration flags such as `check_range`, `check_altitude`, `check_azimuth`, `check_site_discovery`, `check_time_delta`, and `check_fingerprint` are retained for parser-profile compatibility and offline/corpus workflows; live alert authority comes from `EcgAlertConfig` and the service fallback default. The default live alerts include duplicate payload thresholding, legacy signed sequence delta, and radar/router time delta; site/source baseline alerts require an explicit site-approved alert policy.
 
 ### Live record metadata fields
 

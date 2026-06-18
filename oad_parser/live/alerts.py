@@ -50,6 +50,41 @@ ALERT_DEFINITIONS = {
     "OAD-ECG-008": ("Mode C valid but altitude missing", "medium", "message_semantics"),
 }
 
+ALERT_CATEGORIES = {
+    "checksum_integrity": {
+        "label": "Checksum integrity",
+        "description": "UDP checksum was invalid or unexpectedly zero under the active policy.",
+    },
+    "message_semantics": {
+        "label": "Message semantics",
+        "description": "Message content was missing, unknown, or unexpected for the configured ECG/CD2 mode.",
+    },
+    "parser_integrity": {
+        "label": "Parser integrity",
+        "description": "Parser validation or warning evidence was elevated to an alert record.",
+    },
+    "protocol_integrity": {
+        "label": "Protocol integrity",
+        "description": "Malformed ECG/CD2 frame, length, or message-block evidence was observed.",
+    },
+    "replay_duplicate": {
+        "label": "Replay or duplicate",
+        "description": "Duplicate payload or message-hash behavior crossed the configured replay threshold.",
+    },
+    "route_site_change": {
+        "label": "Route or site change",
+        "description": "ARTCC, site, channel, message, or source tuple differed from the approved baseline.",
+    },
+    "source_integrity": {
+        "label": "Source integrity",
+        "description": "Source, destination, port, feed, or message tuple missed the configured authorization policy.",
+    },
+    "timing_anomaly": {
+        "label": "Timing anomaly",
+        "description": "Sequence, radar timestamp, or router timestamp behavior exceeded the configured gap or replay threshold.",
+    },
+}
+
 LEGACY_OPERATOR_ALERT_TAXONOMY = {
     # Unknown-site category: source/site/channel authorization and parser/frame integrity
     # are grouped here so the operator sees one legacy site/feed-integrity family.
@@ -136,6 +171,23 @@ class AlertOverride:
 
     enabled: bool | None = None
     severity: str | None = None
+
+
+DEFAULT_ECG_ALERT_CONFIG = EcgAlertConfig(
+    duplicate_payload_window_seconds=1.0,
+    duplicate_payload_threshold=6,
+    max_sequence_delta=None,
+    legacy_sequence_delta_min_abs=15,
+    legacy_sequence_delta_max_abs=240,
+    max_radar_time_delta_seconds=5.0,
+    max_router_time_delta_seconds=5.0,
+)
+
+
+def default_ecg_alert_config() -> EcgAlertConfig:
+    """Return the live default legacy-compatible operator alert policy."""
+
+    return DEFAULT_ECG_ALERT_CONFIG
 
 
 def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:

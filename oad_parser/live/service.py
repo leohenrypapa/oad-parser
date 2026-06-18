@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Callable, Iterable, Optional, Protocol
 
 from oad_parser.config import LiveParserConfig
-from oad_parser.live.alerts import load_ecg_alert_config
+from oad_parser.live.alerts import default_ecg_alert_config, load_ecg_alert_config
 from oad_parser.live.audit import audit_record_from_storage_result
 from oad_parser.live.classifier import classify_live_frame
 from oad_parser.live.metrics import LiveMetrics
@@ -87,7 +87,7 @@ def run_live_service(
     last_storage_result: Optional[StorageProtectionResult] = None
     writer_block_started_at: Optional[datetime] = None
     last_packet_at: Optional[datetime] = None
-    alert_config = load_ecg_alert_config(config.alert_config_path)
+    alert_config = load_ecg_alert_config(config.alert_config_path) or default_ecg_alert_config()
     sequence_state = LiveSequenceState()
 
     last_error = _emit_audit(

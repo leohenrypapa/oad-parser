@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T18:23:49Z",
+  "generated_at_utc": "2026-06-18T19:56:10Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -84,13 +84,13 @@
     },
     {
       "path": "config/ecg-alerts.example.json",
-      "sha256": "d1b6d866690256c40ed71c208bf53d794fd884faeada90b691976f6cbd8acbf5",
-      "size_bytes": 1215
+      "sha256": "369357e3c2f76a89d1eb9b229093dc06e7cfa6f06ceea8ea03fae2c7618fa5d8",
+      "size_bytes": 1297
     },
     {
       "path": "config/ecg_conf.example.ini",
-      "sha256": "f6737df130b0dfd3c366dd48075270a41a441a46d0d16449b06f04bbe05ee527",
-      "size_bytes": 2032
+      "sha256": "8e78181a1d93389da12d875816a0f1c557257ab67ec94ebfd2818c84b28f7a6c",
+      "size_bytes": 2135
     },
     {
       "path": "config/oad-cd2-profile.example.ini",
@@ -119,8 +119,8 @@
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "b36c807d8036a0d4f62999d1c5b3a3cca52f597fbe95ea3029783ba144bb4af7",
-      "size_bytes": 10144
+      "sha256": "839768b50fea8450cf7f47cd767555513f3e26a9ad3f9f79170df817abd32b46",
+      "size_bytes": 10242
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
@@ -244,8 +244,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "64d3d54e3cc4a694927ae66253b0881a3104573573fc28d36cfc9b64efe5d6ff",
-      "size_bytes": 32780
+      "sha256": "18f804b2370fb971f1497694a013f411c73dfcb29443bd6e6824ebf2a6c7ee86",
+      "size_bytes": 34724
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -264,8 +264,8 @@
     },
     {
       "path": "oad_parser/live/pipeline.py",
-      "sha256": "8ce3972253cc39c6949385d8d4cbf838d3d06aab18e217299f82e46c52f30249",
-      "size_bytes": 14879
+      "sha256": "5aee22b24d2c56891bb0c9c219c637c9bf6bd850a677edc0460d59e922f36ab0",
+      "size_bytes": 14747
     },
     {
       "path": "oad_parser/live/records.py",
@@ -274,8 +274,8 @@
     },
     {
       "path": "oad_parser/live/service.py",
-      "sha256": "921d7e0091d74cc5dff9db1aa47bc5fb4dabae3f2bac7e817a3529d1dfd78356",
-      "size_bytes": 17236
+      "sha256": "5934f933cb41c43c2a9f4420287759be10366661e23792e48d42ca28b8cd5a87",
+      "size_bytes": 17292
     },
     {
       "path": "oad_parser/live/storage.py",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T18:23:49Z",
+    "generated_at_utc": "2026-06-18T19:56:10Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",

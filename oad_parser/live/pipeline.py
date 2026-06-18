@@ -8,11 +8,17 @@ second time.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Deque, Dict, List, Mapping, Optional, Tuple
 
-from oad_parser.live.alerts import EcgAlertConfig, apply_legacy_alert_fields, make_alert
+from oad_parser.live.alerts import (
+    DEFAULT_ECG_ALERT_CONFIG,
+    EcgAlertConfig,
+    apply_legacy_alert_fields,
+    make_alert,
+)
 from oad_parser.live.classifier import (
     OUTCOME_ECG_CANDIDATE,
     LiveFrameClassification,
@@ -26,15 +32,7 @@ from oad_parser.parsers.ecg import (
 from oad_parser.transformers.legacy_ecg import transform_parse_result_to_legacy_records
 
 
-DEFAULT_MODE1_OPERATIONAL_ALERT_CONFIG = EcgAlertConfig(
-    duplicate_payload_window_seconds=1.0,
-    duplicate_payload_threshold=6,
-    max_sequence_delta=None,
-    legacy_sequence_delta_min_abs=15,
-    legacy_sequence_delta_max_abs=240,
-    max_radar_time_delta_seconds=5.0,
-    max_router_time_delta_seconds=5.0,
-)
+DEFAULT_MODE1_OPERATIONAL_ALERT_CONFIG = DEFAULT_ECG_ALERT_CONFIG
 
 
 @dataclass
@@ -44,7 +42,7 @@ class LiveSequenceState:
     last_sequence_by_key: Dict[Tuple[object, ...], int] = None
     last_radar_timestamp_by_key: Dict[Tuple[object, ...], float] = None
     last_router_timestamp_by_key: Dict[Tuple[object, ...], float] = None
-    duplicate_window_by_key: Dict[Tuple[object, ...], List[Tuple[datetime, str]]] = None
+    duplicate_window_by_key: Dict[Tuple[object, ...], Deque[Tuple[float, str]]] = None
 
     def __post_init__(self) -> None:
         if self.last_sequence_by_key is None:
@@ -102,10 +100,12 @@ class LiveSequenceState:
 
         seen_at = _record_datetime(record)
         duplicate_key = _duplicate_key(record) + (message_hash,)
-        window = self.duplicate_window_by_key.setdefault(duplicate_key, [])
-        cutoff = seen_at.timestamp() - window_seconds
-        window[:] = [(stamp, text) for stamp, text in window if stamp.timestamp() >= cutoff]
-        window.append((seen_at, str(record.get("@timestamp") or seen_at.isoformat())))
+        window = self.duplicate_window_by_key.setdefault(duplicate_key, deque())
+        seen_at_seconds = seen_at.timestamp()
+        cutoff = seen_at_seconds - window_seconds
+        while window and window[0][0] < cutoff:
+            window.popleft()
+        window.append((seen_at_seconds, str(record.get("@timestamp") or seen_at.isoformat())))
 
         if len(window) <= 1:
             return False

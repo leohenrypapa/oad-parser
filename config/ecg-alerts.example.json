@@ -49,7 +49,9 @@
   "udp_zero_checksum_allowed": true,
   "duplicate_payload_window_seconds": 1.0,
   "duplicate_payload_threshold": 6,
-  "max_sequence_delta": 1,
+  "max_sequence_delta": null,
+  "legacy_sequence_delta_min_abs": 15,
+  "legacy_sequence_delta_max_abs": 240,
   "max_radar_time_delta_seconds": 5.0,
   "max_router_time_delta_seconds": 5.0,
   "admin_workstation_ips": [
