@@ -64,6 +64,7 @@ Thumbs.db
 operator-ui/node_modules/
 operator-ui/.npm/
 operator-ui/.cache/
+operator-ui/.cache/ms-playwright/
 operator-ui/.playwright/
 operator-ui/playwright-report/
 operator-ui/test-results/
