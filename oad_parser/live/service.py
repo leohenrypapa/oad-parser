@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Callable, Iterable, Optional
+from typing import Callable, Iterable, Optional, Protocol
 
 from oad_parser.config import LiveParserConfig
 from oad_parser.live.alerts import load_ecg_alert_config
@@ -30,6 +30,11 @@ RecordSink = Callable[[dict], object]
 AuditSink = Callable[[EcgAuditRecord], object]
 StatusSink = Callable[[EcgStatusSnapshot], object]
 NowFn = Callable[[], datetime]
+
+
+class StopEvent(Protocol):
+    def is_set(self) -> bool:
+        ...
 
 
 @dataclass(frozen=True)
@@ -64,6 +69,7 @@ def run_live_service(
     storage_policy: Optional[LiveStoragePolicy] = None,
     max_frames: Optional[int] = None,
     now_fn: Optional[NowFn] = None,
+    stop_event: Optional[StopEvent] = None,
 ) -> LiveServiceResult:
     """Run the live service over a finite iterable of capture frames."""
 
@@ -80,6 +86,7 @@ def run_live_service(
     storage_critical = False
     last_storage_result: Optional[StorageProtectionResult] = None
     writer_block_started_at: Optional[datetime] = None
+    last_packet_at: Optional[datetime] = None
     alert_config = load_ecg_alert_config(config.alert_config_path)
     sequence_state = LiveSequenceState()
 
@@ -94,125 +101,160 @@ def run_live_service(
     last_status_emit_at = resolved_now_fn()
     last_metrics_emit_at = resolved_now_fn()
 
-    frame_iter = iter(capture_frames)
-    while True:
-        if max_frames is not None and frames_processed >= max_frames:
-            stopped_reason = "max_frames"
-            break
+    try:
+        frame_iter = iter(capture_frames)
+        while True:
+            if stop_event is not None and stop_event.is_set():
+                stopped_reason = "stop_requested"
+                break
+            if max_frames is not None and frames_processed >= max_frames:
+                stopped_reason = "max_frames"
+                break
 
-        storage_state = _apply_storage_policy(
-            config=config,
-            metrics=resolved_metrics,
-            storage_policy=storage_policy,
-            audit_sink=audit_sink,
-            status_sink=status_sink,
-            now_fn=resolved_now_fn,
-            last_error=last_error,
-        )
-        last_error = storage_state.last_error
-        last_storage_result = storage_state.result
-        writer_blocked = storage_state.writer_blocked
+            storage_state = _apply_storage_policy(
+                config=config,
+                metrics=resolved_metrics,
+                storage_policy=storage_policy,
+                audit_sink=audit_sink,
+                status_sink=status_sink,
+                now_fn=resolved_now_fn,
+                last_error=last_error,
+            )
+            last_error = storage_state.last_error
+            last_storage_result = storage_state.result
+            writer_blocked = storage_state.writer_blocked
 
-        writer_block_started_at = _update_writer_block_timer(
+            writer_block_started_at = _update_writer_block_timer(
+                metrics=resolved_metrics,
+                writer_blocked=writer_blocked,
+                writer_block_started_at=writer_block_started_at,
+                now_fn=resolved_now_fn,
+            )
+
+            if storage_state.critical:
+                storage_critical = True
+                stopped_reason = "critical_storage"
+                break
+
+            try:
+                capture_frame = next(frame_iter)
+            except StopIteration:
+                stopped_reason = "input_exhausted"
+                break
+
+            if capture_frame is None:
+                last_status_emit_at, last_error = _emit_periodic_status(
+                    status_sink=status_sink,
+                    config=config,
+                    metrics=resolved_metrics,
+                    now_fn=resolved_now_fn,
+                    last_error=last_error,
+                    last_status_emit_at=last_status_emit_at,
+                    storage_result=last_storage_result,
+                    last_packet_at=last_packet_at,
+                    frames_processed=frames_processed,
+                )
+                last_metrics_emit_at, last_error = _emit_periodic_metrics(
+                    audit_sink=audit_sink,
+                    config=config,
+                    metrics=resolved_metrics,
+                    now_fn=resolved_now_fn,
+                    last_error=last_error,
+                    last_metrics_emit_at=last_metrics_emit_at,
+                    frames_processed=frames_processed,
+                    records_emitted=records_emitted,
+                    writer_blocked=writer_blocked,
+                    storage_critical=storage_critical,
+                )
+                continue
+
+            last_packet_at = capture_frame.capture_time_utc
+            classification = classify_live_frame(capture_frame, metrics=resolved_metrics)
+            pipeline_result = process_classified_live_frame(
+                classification,
+                metrics=resolved_metrics,
+                alert_config=alert_config,
+                sequence_state=sequence_state,
+            )
+
+            if writer_blocked and config.block_when_full:
+                if pipeline_result.records:
+                    resolved_metrics.increment("output_drops", len(pipeline_result.records))
+                frames_processed += 1
+                continue
+
+            for record in pipeline_result.records:
+                try:
+                    write_result = None
+                    if record_sink is not None:
+                        write_result = record_sink(record)
+                    _update_metrics_from_write_result(resolved_metrics, write_result)
+                    if getattr(write_result, "bytes_written", None) == 0:
+                        continue
+                    records_emitted += 1
+                except Exception as exc:
+                    resolved_metrics.increment("output_drops")
+                    last_error = "record sink failed: %s" % exc
+
+            frames_processed += 1
+
+            last_status_emit_at, last_error = _emit_periodic_status(
+                status_sink=status_sink,
+                config=config,
+                metrics=resolved_metrics,
+                now_fn=resolved_now_fn,
+                last_error=last_error,
+                last_status_emit_at=last_status_emit_at,
+                storage_result=last_storage_result,
+                last_packet_at=last_packet_at,
+                frames_processed=frames_processed,
+            )
+            last_metrics_emit_at, last_error = _emit_periodic_metrics(
+                audit_sink=audit_sink,
+                config=config,
+                metrics=resolved_metrics,
+                now_fn=resolved_now_fn,
+                last_error=last_error,
+                last_metrics_emit_at=last_metrics_emit_at,
+                frames_processed=frames_processed,
+                records_emitted=records_emitted,
+                writer_blocked=writer_blocked,
+                storage_critical=storage_critical,
+            )
+    finally:
+        _update_writer_block_timer(
             metrics=resolved_metrics,
-            writer_blocked=writer_blocked,
+            writer_blocked=False,
             writer_block_started_at=writer_block_started_at,
             now_fn=resolved_now_fn,
         )
 
-        if storage_state.critical:
-            storage_critical = True
-            stopped_reason = "critical_storage"
-            break
-
-        try:
-            capture_frame = next(frame_iter)
-        except StopIteration:
-            stopped_reason = "input_exhausted"
-            break
-
-        classification = classify_live_frame(capture_frame, metrics=resolved_metrics)
-        pipeline_result = process_classified_live_frame(
-            classification,
-            metrics=resolved_metrics,
-            alert_config=alert_config,
-            sequence_state=sequence_state,
+        last_error = _emit_audit(
+            audit_sink,
+            config,
+            resolved_now_fn,
+            "live_service_stop",
+            {
+                "stopped_reason": stopped_reason,
+                "frames_processed": frames_processed,
+                "records_emitted": records_emitted,
+                "output_drops": resolved_metrics.output_drops,
+                "writer_blocked": writer_blocked,
+                "storage_critical": storage_critical,
+            },
+            last_error,
         )
 
-        if writer_blocked and config.block_when_full:
-            if pipeline_result.records:
-                resolved_metrics.increment("output_drops", len(pipeline_result.records))
-            frames_processed += 1
-            continue
-
-        for record in pipeline_result.records:
-            try:
-                write_result = None
-                if record_sink is not None:
-                    write_result = record_sink(record)
-                _update_metrics_from_write_result(resolved_metrics, write_result)
-                if getattr(write_result, "bytes_written", None) == 0:
-                    continue
-                records_emitted += 1
-            except Exception as exc:
-                resolved_metrics.increment("output_drops")
-                last_error = "record sink failed: %s" % exc
-
-        frames_processed += 1
-
-        last_status_emit_at, last_error = _emit_periodic_status(
-            status_sink=status_sink,
-            config=config,
-            metrics=resolved_metrics,
-            now_fn=resolved_now_fn,
-            last_error=last_error,
-            last_status_emit_at=last_status_emit_at,
+        last_error = _emit_status(
+            status_sink,
+            config,
+            resolved_metrics,
+            resolved_now_fn,
+            last_error,
             storage_result=last_storage_result,
-        )
-        last_metrics_emit_at, last_error = _emit_periodic_metrics(
-            audit_sink=audit_sink,
-            config=config,
-            metrics=resolved_metrics,
-            now_fn=resolved_now_fn,
-            last_error=last_error,
-            last_metrics_emit_at=last_metrics_emit_at,
+            last_packet_at=last_packet_at,
             frames_processed=frames_processed,
-            records_emitted=records_emitted,
-            writer_blocked=writer_blocked,
-            storage_critical=storage_critical,
         )
-
-    _update_writer_block_timer(
-        metrics=resolved_metrics,
-        writer_blocked=False,
-        writer_block_started_at=writer_block_started_at,
-        now_fn=resolved_now_fn,
-    )
-
-    last_error = _emit_audit(
-        audit_sink,
-        config,
-        resolved_now_fn,
-        "live_service_stop",
-        {
-            "stopped_reason": stopped_reason,
-            "frames_processed": frames_processed,
-            "records_emitted": records_emitted,
-            "output_drops": resolved_metrics.output_drops,
-            "writer_blocked": writer_blocked,
-            "storage_critical": storage_critical,
-        },
-        last_error,
-    )
-
-    last_error = _emit_status(
-        status_sink,
-        config,
-        resolved_metrics,
-        resolved_now_fn,
-        last_error,
-        storage_result=last_storage_result,
-    )
 
     return LiveServiceResult(
         metrics=resolved_metrics,
@@ -300,6 +342,8 @@ def _emit_periodic_status(
     last_error: Optional[str],
     last_status_emit_at: datetime,
     storage_result: Optional[StorageProtectionResult],
+    last_packet_at: Optional[datetime],
+    frames_processed: int,
 ) -> tuple[datetime, Optional[str]]:
     now = now_fn()
     elapsed_seconds = (now - last_status_emit_at).total_seconds()
@@ -313,6 +357,8 @@ def _emit_periodic_status(
         lambda: now,
         last_error,
         storage_result=storage_result,
+        last_packet_at=last_packet_at,
+        frames_processed=frames_processed,
     )
     return now, last_error
 
@@ -418,6 +464,8 @@ def _emit_status(
     last_error: Optional[str],
     *,
     storage_result: Optional[StorageProtectionResult] = None,
+    last_packet_at: Optional[datetime] = None,
+    frames_processed: int = 0,
 ) -> Optional[str]:
     if status_sink is None:
         return last_error
@@ -431,15 +479,21 @@ def _emit_status(
         )
 
     try:
+        now = now_fn()
         status_sink(
             EcgStatusSnapshot(
-                timestamp_utc=now_fn(),
+                timestamp_utc=now,
                 interface=config.interface,
                 counters=metrics.snapshot(),
                 active_file=config.output_json_file,
                 disk_percent=disk_percent,
                 last_prune=last_prune,
                 last_error=last_error,
+                last_packet_time_utc=last_packet_at,
+                last_status_time_utc=now,
+                idle_age_seconds=_elapsed_seconds(now, last_packet_at),
+                frames_processed=frames_processed,
+                storage_state=_storage_state(storage_result),
             )
         )
         return last_error
@@ -449,3 +503,21 @@ def _emit_status(
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _elapsed_seconds(now: datetime, then: Optional[datetime]) -> Optional[float]:
+    if then is None:
+        return None
+    return max(0.0, (now - then).total_seconds())
+
+
+def _storage_state(storage_result: Optional[StorageProtectionResult]) -> Optional[dict]:
+    if storage_result is None:
+        return None
+    return {
+        "disk_usage_percent": storage_result.disk_usage_percent,
+        "writer_blocked": storage_result.writer_blocked,
+        "critical": storage_result.critical,
+        "files_pruned": storage_result.files_pruned,
+        "bytes_pruned": storage_result.bytes_pruned,
+    }

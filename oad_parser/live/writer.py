@@ -515,6 +515,9 @@ class RotatingJsonlWriter:
         _apply_field_policy(snapshot, self.field_policy)
         return self._write_encoded_record(snapshot)
 
+    def close(self) -> None:
+        self._duplicate_accounting.close()
+
     def _write_encoded_record(self, encoded_record: Mapping[str, object]) -> JsonlWriteResult:
         payload = (
             json.dumps(

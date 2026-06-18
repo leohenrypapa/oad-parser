@@ -165,9 +165,24 @@ class EcgStatusSnapshot:
     last_rotation: Optional[str] = None
     last_prune: Optional[str] = None
     last_error: Optional[str] = None
+    last_packet_time_utc: Optional[datetime] = None
+    last_status_time_utc: Optional[datetime] = None
+    idle_age_seconds: Optional[float] = None
+    frames_processed: Optional[int] = None
+    storage_state: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         record = live_record_metadata()
+        last_packet_time = (
+            format_utc_timestamp(self.last_packet_time_utc)
+            if self.last_packet_time_utc is not None
+            else None
+        )
+        last_status_time = (
+            format_utc_timestamp(self.last_status_time_utc)
+            if self.last_status_time_utc is not None
+            else None
+        )
         record.update(
             {
                 "@timestamp": format_utc_timestamp(self.timestamp_utc),
@@ -179,6 +194,11 @@ class EcgStatusSnapshot:
                 "last_rotation": self.last_rotation,
                 "last_prune": self.last_prune,
                 "last_error": self.last_error,
+                "last_packet_time_utc": last_packet_time,
+                "last_status_time_utc": last_status_time,
+                "idle_age_seconds": self.idle_age_seconds,
+                "frames_processed": self.frames_processed,
+                "storage_state": self.storage_state,
             }
         )
         return record

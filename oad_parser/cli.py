@@ -12,6 +12,8 @@ import importlib.util
 from dataclasses import replace
 import json
 import re
+import signal
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -607,6 +609,9 @@ def run_replay_pcap_live(args: argparse.Namespace) -> int:
 
 
 def run_live(args: argparse.Namespace) -> int:
+    stop_event, restore_signals = _install_live_signal_handlers()
+    writer = None
+    result = None
     try:
         config = load_live_parser_config(args.config)
         if args.interface is not None:
@@ -619,7 +624,7 @@ def run_live(args: argparse.Namespace) -> int:
         if args.max_frames == 0:
             capture_frames = []
         else:
-            capture_frames = iter_live_capture_frames_from_config(config)
+            capture_frames = iter_live_capture_frames_from_config(config, stop_event=stop_event)
 
         result = run_live_service(
             config,
@@ -629,8 +634,8 @@ def run_live(args: argparse.Namespace) -> int:
             status_sink=observability.status_sink if observability is not None else None,
             storage_policy=storage_policy,
             max_frames=args.max_frames,
+            stop_event=stop_event,
         )
-        writer.write_accounting_snapshot(reason=result.stopped_reason)
 
         print(
             "live service complete: reason=%s frames=%d records=%d interface=%s frames_processed=%d records_emitted=%d"
@@ -655,6 +660,15 @@ def run_live(args: argparse.Namespace) -> int:
     except Exception as exc:
         print("live service failed: %s" % exc)
         return 2
+    finally:
+        try:
+            if writer is not None:
+                reason = result.stopped_reason if result is not None else "live_exception"
+                writer.write_accounting_snapshot(reason=reason)
+        finally:
+            if writer is not None and hasattr(writer, "close"):
+                writer.close()
+            restore_signals()
 
 
 def run_capture(args: argparse.Namespace) -> int:
@@ -674,6 +688,24 @@ def run_capture(args: argparse.Namespace) -> int:
     )
     print(f"wrote {count} records to {output_path}")
     return 0
+
+
+def _install_live_signal_handlers():
+    stop_event = threading.Event()
+    previous = {}
+
+    def _handler(signum, _frame):
+        stop_event.set()
+
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        previous[signum] = signal.getsignal(signum)
+        signal.signal(signum, _handler)
+
+    def _restore():
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+    return stop_event, _restore
 
 
 def run_decode_cd2_words(args: argparse.Namespace) -> int:

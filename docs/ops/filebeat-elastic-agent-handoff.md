@@ -49,6 +49,8 @@ This file is JSON Lines. Each line is one complete JSON object with `record_type
 
 Audit is intended for aggregate operational evidence such as startup, shutdown, storage pruning, writer block, critical storage, and status-summary style events. The parser should not emit one audit record per parse warning by default.
 
+`config/ecg_conf.example.ini` defaults `output_status = False`. In that evidence-first default, audit JSONL is not created unless status/audit observability is explicitly enabled. The required default parser-owned handoff evidence remains `/nsm/ecg/ecg-current.json`, including final `parser_accounting` snapshots.
+
 ## Local status output
 
 The local status file is:
@@ -58,6 +60,8 @@ The local status file is:
 This is a single JSON object replaced by the parser. It is not JSON Lines and is not part of MVP central collection.
 
 The status file is intended for local operator inspection.
+
+Operator UI readiness and runbooks must not require `/run/oad-parser/ecg-status.json` for the default parser config. When `output_status=True`, status snapshots include last packet time, last status time, idle age, frames processed, counters, disk percent, and storage state for local unattended-operation checks.
 
 ## Rotation and pruning behavior
 

@@ -134,6 +134,26 @@ The service uses:
 
 This allows systemd to mark the service failed when the parser exits nonzero, while reducing the risk of a tight restart loop.
 
+## Shutdown behavior
+
+The live parser handles `SIGTERM` and `SIGINT` as graceful stop requests. On a systemd stop, the raw socket receive loop wakes on its idle poll interval, the live service exits with `stop_requested`, and the CLI appends the final parser accounting snapshot before process exit. When `output_status=True`, the service also writes final audit and status records from its shutdown `finally` path.
+
+Idle interfaces still emit wall-clock status heartbeats and continue storage checks while no packets arrive. Status snapshots include last packet time, last status time, idle age, frames processed, counters, and storage state when status output is enabled.
+
+## Hardening and preflight
+
+The unit keeps the root runtime and `CAP_NET_RAW` capture capability required for Linux packet capture, but constrains the process with systemd hardening:
+
+    ExecStartPre=/usr/bin/test -d /nsm/ecg
+    ExecStartPre=/usr/bin/test -r /etc/oad-parser/ecg_conf.ini
+    RuntimeDirectory=oad-parser
+    LogsDirectory=oad-parser
+    ProtectSystem=strict
+    ReadWritePaths=/nsm/ecg /var/log/oad-parser /run/oad-parser
+    RestrictAddressFamilies=AF_PACKET AF_INET AF_INET6 AF_UNIX
+
+Do not remove `CAP_NET_RAW` or `AF_PACKET`; doing so prevents raw packet capture.
+
 ## Runtime files
 
 The live parser uses these default runtime files:
@@ -145,6 +165,8 @@ The live parser uses these default runtime files:
 `ecg-current.json` keeps the `.json` suffix for legacy/runtime familiarity, but it is JSON Lines: one JSON object per line.
 
 `ecg-status.json` is local-only for MVP operator inspection.
+
+The evidence-first default parser output is `/nsm/ecg/ecg-current.json` plus final `parser_accounting` snapshots. `config/ecg_conf.example.ini` keeps `output_status = False`, so `/var/log/oad-parser/ecg-audit.jsonl` and `/run/oad-parser/ecg-status.json` are optional local observability outputs, not mandatory default handoff files. Enable `output_status=True` when unattended field operation requires local audit/status files.
 
 ## Verification
 

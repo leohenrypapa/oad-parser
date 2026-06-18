@@ -55,7 +55,7 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T15:59:13Z",
+  "generated_at_utc": "2026-06-18T16:12:23Z",
   "included_files": [
     {
       "path": ".gitignore",
@@ -104,8 +104,8 @@
     },
     {
       "path": "deploy/systemd/ecg-parser@.service",
-      "sha256": "81eee4d2b656283c221b437554b214e92b8757769bbc56c4e9b6b95d2d1174a5",
-      "size_bytes": 544
+      "sha256": "6e5b18937ea2595339c21bc367aa01829ef1d668808c1ccda53e46ed8aad69a6",
+      "size_bytes": 1129
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
@@ -114,13 +114,13 @@
     },
     {
       "path": "docs/ops/filebeat-elastic-agent-handoff.md",
-      "sha256": "c4c579405d5e55d12046777a5ca7256bde74ea0534979cb5fdd27f34eef9f799",
-      "size_bytes": 8644
+      "sha256": "fcadf0b57d757eebb3154553ed83ee1350c8aa1def7102f7fccee2bf24a7a79c",
+      "size_bytes": 9275
     },
     {
       "path": "docs/ops/systemd-live-parser.md",
-      "sha256": "e85d1a3dffd9d56df94fc99609c15483c74ce7026b8293d005bada176d5e7b80",
-      "size_bytes": 8978
+      "sha256": "489a4a18847092130bc3801f33f1a131c2a392081ebd10151664ae16d8e9ba12",
+      "size_bytes": 10669
     },
     {
       "path": "docs/release/CUSTOMER_HANDOFF.md",
@@ -154,8 +154,8 @@
     },
     {
       "path": "oad_parser/cli.py",
-      "sha256": "ecb6446dcd16c0e774cacda67346a97a892a5cd9b62c4502fce5b3cc84048115",
-      "size_bytes": 36149
+      "sha256": "4c7809fc72ce38b945739672c2816f5f17531e3ab5f33a2257d7de6e51054e6b",
+      "size_bytes": 37069
     },
     {
       "path": "oad_parser/compare.py",
@@ -219,8 +219,8 @@
     },
     {
       "path": "oad_parser/ingest/live_socket.py",
-      "sha256": "e57a77f242b55a702997624f25617a61c6a1665eb9dc6222dea44856b75cb5fe",
-      "size_bytes": 3511
+      "sha256": "cf4028c3c916c99d37d568ac12b2658147551a7b6079b2e5c07f828ccb0e5233",
+      "size_bytes": 4721
     },
     {
       "path": "oad_parser/ingest/pcap.py",
@@ -269,13 +269,13 @@
     },
     {
       "path": "oad_parser/live/records.py",
-      "sha256": "5c22f4163a471eb2571f3e24aa9ac867ac15b4db77072761854f05f9be7c99f1",
-      "size_bytes": 6868
+      "sha256": "5ab27ecc0f4942cf44e276b8d924e1e86da87b093d265b879090cef456a6d3c0",
+      "size_bytes": 7746
     },
     {
       "path": "oad_parser/live/service.py",
-      "sha256": "67f5bfb1d2cde29935f66893a1d2b1d3f8a2dd6dd3c6a9934664e4a3cee9f407",
-      "size_bytes": 13927
+      "sha256": "921d7e0091d74cc5dff9db1aa47bc5fb4dabae3f2bac7e817a3529d1dfd78356",
+      "size_bytes": 17236
     },
     {
       "path": "oad_parser/live/storage.py",
@@ -284,8 +284,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "c241ad4fd70ee31e3cacb17447645094f1f49a7729a18283f980718ce3799c62",
-      "size_bytes": 53295
+      "sha256": "6310810d4735597edc48db0e12221295c21d3b9fd7a88453f95c6ec20fd0fee5",
+      "size_bytes": 53368
     },
     {
       "path": "oad_parser/models.py",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T15:59:13Z",
+    "generated_at_utc": "2026-06-18T16:12:23Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",
