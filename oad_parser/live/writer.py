@@ -39,10 +39,9 @@ class JsonlWriteResult:
 class FieldPolicy:
     """Runtime-supported field policy.
 
-    V1 policies support suppression of fields already cataloged as optional.
+    V1 policies support suppression of cataloged emitted fields.
     V2 additionally supports controlled ordering, aliases for non-protected
-    fields, and validated SIEM mapping metadata. Compact cyber/evidence fields
-    remain protected.
+    fields, and validated SIEM mapping metadata.
     """
 
     schema_version: str = "2026-06-15.phase5b"
@@ -93,10 +92,6 @@ def field_policy_from_dict(data: Mapping[str, object]) -> FieldPolicy:
     unknown_fields = sorted(set(disabled) - known_fields)
     if unknown_fields:
         raise ValueError("field policy references unknown field(s): %s" % ", ".join(unknown_fields))
-
-    unsupported_disabled = sorted(set(disabled) - set(SIEM_OPTIONAL_EVENT_FIELDS))
-    if unsupported_disabled:
-        raise ValueError("field policy may only disable optional field(s): %s" % ", ".join(unsupported_disabled))
 
     desired_order = _string_sequence(data.get("desired_order", []), "desired_order")
     display_labels = _string_map(data.get("display_labels", {}), "display_labels")
@@ -1139,8 +1134,7 @@ def _apply_field_policy(record: Dict[str, object], policy: Optional[FieldPolicy]
     if policy is None:
         return
     for field_name in policy.disabled_fields:
-        if field_name in SIEM_OPTIONAL_EVENT_FIELDS:
-            record.pop(field_name, None)
+        record.pop(field_name, None)
     labels = dict(policy.display_labels or {})
     if not policy.desired_order and not labels:
         return

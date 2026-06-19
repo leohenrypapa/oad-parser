@@ -55,12 +55,12 @@
     ".pyo",
     ".log"
   ],
-  "generated_at_utc": "2026-06-18T19:56:10Z",
+  "generated_at_utc": "2026-06-19T00:26:32Z",
   "included_files": [
     {
       "path": ".gitignore",
-      "sha256": "b6e8f1c82ba77cb71d8a96f25e1d2512d67083118a61146d1e78febaf9c1c816",
-      "size_bytes": 1547
+      "sha256": "6709551361bec84f832e9067f8cb9e43b4195f9b177a0201eef5d2e042fbaa8d",
+      "size_bytes": 1538
     },
     {
       "path": "CHANGELOG.md",
@@ -244,8 +244,8 @@
     },
     {
       "path": "oad_parser/live/alerts.py",
-      "sha256": "18f804b2370fb971f1497694a013f411c73dfcb29443bd6e6824ebf2a6c7ee86",
-      "size_bytes": 34724
+      "sha256": "513013d1acc9177c17cf46144d0eb3fba2b02ab5a427e4c9bf7a58aaa26ec9fe",
+      "size_bytes": 46828
     },
     {
       "path": "oad_parser/live/audit.py",
@@ -284,8 +284,8 @@
     },
     {
       "path": "oad_parser/live/writer.py",
-      "sha256": "96b4068bd9d289bd52304bdf4b9a4a609269b836dc00e6aff1b739384efe0817",
-      "size_bytes": 53353
+      "sha256": "ca7f9529ad75784c487316a7d6e5d691b0799aab7461ed7a907c473f3d0082e2",
+      "size_bytes": 53005
     },
     {
       "path": "oad_parser/models.py",
@@ -387,7 +387,7 @@
   "schema_version": "customer-pack-manifest.v2",
   "source_provenance": {
     "dirty_tree_status_at_generation": "unknown-non-git-source-tree",
-    "generated_at_utc": "2026-06-18T19:56:10Z",
+    "generated_at_utc": "2026-06-19T00:26:32Z",
     "generated_by_python": "3.9.25",
     "generator_script_path": "scripts/make_customer_pack.sh",
     "generator_script_sha256": "ca8bcda9ac1a7b0d9b70c9b18caa388425f0677a62155e1d6a6b7e9c0f806056",

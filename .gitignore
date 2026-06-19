@@ -60,7 +60,7 @@ samples/private/*
 .DS_Store
 Thumbs.db
 *.swp
-# Operator UI browser smoke dependencies and generated outputs
+# Operator UI local tool caches and generated outputs
 operator-ui/node_modules/
 operator-ui/.npm/
 operator-ui/.cache/

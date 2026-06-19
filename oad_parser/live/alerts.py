@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Any, Mapping, Sequence
 
 SEVERITY_RANK = {
@@ -34,6 +36,25 @@ ALERT_POLICY_UNSUPPORTED_OVERRIDE_KEYS = frozenset(
         "suppression_window_seconds",
     }
 )
+CUSTOM_ALERT_OPERATORS = frozenset(
+    {
+        "equals",
+        "not_equals",
+        "greater_than",
+        "greater_than_or_equal",
+        "less_than",
+        "less_than_or_equal",
+        "contains",
+        "does_not_contain",
+        "exists",
+        "does_not_exist",
+        "in_list",
+        "not_in_list",
+    }
+)
+CUSTOM_ALERT_VALUE_OPERATORS = CUSTOM_ALERT_OPERATORS - frozenset({"exists", "does_not_exist"})
+CUSTOM_ALERT_FIELD_RE = re.compile(r"^[A-Za-z0-9_.@:-]{1,128}$")
+CUSTOM_ALERT_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,80}$")
 
 ALERT_DEFINITIONS = {
     "ECG-CD2-001": ("unauthorized_source_tuple", "high", "source_integrity"),
@@ -163,6 +184,7 @@ class EcgAlertConfig:
     max_radar_time_delta_seconds: float | None = None
     max_router_time_delta_seconds: float | None = None
     desired_alert_overrides: Mapping[str, "AlertOverride"] = field(default_factory=dict)
+    custom_rules: tuple["CustomAlertRule", ...] = ()
 
 
 @dataclass(frozen=True)
@@ -171,6 +193,28 @@ class AlertOverride:
 
     enabled: bool | None = None
     severity: str | None = None
+
+
+@dataclass(frozen=True)
+class CustomAlertCondition:
+    """One per-record custom alert condition."""
+
+    field: str
+    operator: str
+    value: Any = None
+
+
+@dataclass(frozen=True)
+class CustomAlertRule:
+    """Operator-authored per-record alert rule."""
+
+    id: str
+    name: str
+    enabled: bool
+    severity: str
+    description: str
+    logic: str
+    conditions: tuple[CustomAlertCondition, ...]
 
 
 DEFAULT_ECG_ALERT_CONFIG = EcgAlertConfig(
@@ -235,6 +279,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         "max_radar_time_delta_seconds",
         "max_router_time_delta_seconds",
         "desired_alert_overrides",
+        "custom_rules",
     }
     unknown = sorted(set(data) - allowed_keys)
     if unknown:
@@ -308,6 +353,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         data.get("desired_alert_overrides"),
         schema_version,
     )
+    custom_rules = _custom_alert_rules(data.get("custom_rules"), schema_version)
 
     return EcgAlertConfig(
         version=version,
@@ -346,6 +392,7 @@ def load_ecg_alert_config(path: str | Path | None) -> EcgAlertConfig | None:
         max_radar_time_delta_seconds=max_radar_time_delta_seconds,
         max_router_time_delta_seconds=max_router_time_delta_seconds,
         desired_alert_overrides=desired_alert_overrides,
+        custom_rules=custom_rules,
     )
 
 
@@ -378,7 +425,10 @@ def evaluate_ecg_record_alerts(
     if config is not None:
         alerts.extend(_configured_alerts(record, data_words, config, message, message_type, site_id))
 
-    return _deduplicate_alerts(_apply_alert_overrides(alerts, config))
+    alerts = _apply_alert_overrides(alerts, config)
+    if config is not None:
+        alerts.extend(_custom_rule_alerts(record, config))
+    return _deduplicate_alerts(alerts)
 
 
 def evaluate_ecg_parse_error_alerts(
@@ -411,7 +461,10 @@ def evaluate_ecg_parse_error_alerts(
                 _as_str(record.get("site_id")),
             )
         )
-    return _deduplicate_alerts(_apply_alert_overrides(alerts, config))
+    alerts = _apply_alert_overrides(alerts, config)
+    if config is not None:
+        alerts.extend(_custom_rule_alerts(record, config))
+    return _deduplicate_alerts(alerts)
 
 
 def apply_legacy_alert_fields(record: dict[str, Any], alerts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -718,6 +771,142 @@ def make_alert(
     return alert
 
 
+def _custom_rule_alerts(record: Mapping[str, Any], config: EcgAlertConfig) -> list[dict[str, Any]]:
+    alerts: list[dict[str, Any]] = []
+    for rule in config.custom_rules:
+        if not rule.enabled:
+            continue
+        matches = [_condition_matches(record, condition) for condition in rule.conditions]
+        matched = all(matches) if rule.logic == "ALL" else any(matches)
+        if not matched:
+            continue
+        details = rule.description or "Custom alert rule matched."
+        alerts.append(
+            {
+                "id": rule.id,
+                "name": rule.name,
+                "severity": rule.severity,
+                "category": "custom",
+                "details": details,
+                "message": details,
+                "event.kind": "alert",
+                "event.category": "custom",
+                "event.action": rule.name,
+                "event.severity": rule.severity,
+                "rule.id": rule.id,
+                "rule.name": rule.name,
+                "rule.category": "custom",
+                "evidence": {
+                    "logic": rule.logic,
+                    "conditions": [
+                        {
+                            "field": condition.field,
+                            "operator": condition.operator,
+                            "matched": matches[index],
+                        }
+                        for index, condition in enumerate(rule.conditions)
+                    ],
+                },
+            }
+        )
+    return alerts
+
+
+def _condition_matches(record: Mapping[str, Any], condition: CustomAlertCondition) -> bool:
+    exists, actual = _record_field_value(record, condition.field)
+    operator = condition.operator
+    expected = condition.value
+    if operator == "exists":
+        return exists
+    if operator == "does_not_exist":
+        return not exists
+    if not exists:
+        return False
+    if operator == "equals":
+        return _values_equal(actual, expected)
+    if operator == "not_equals":
+        return not _values_equal(actual, expected)
+    if operator == "contains":
+        return str(expected) in str(actual)
+    if operator == "does_not_contain":
+        return str(expected) not in str(actual)
+    if operator == "in_list":
+        values = expected if isinstance(expected, list) else []
+        return any(_values_equal(actual, item) for item in values)
+    if operator == "not_in_list":
+        values = expected if isinstance(expected, list) else []
+        return not any(_values_equal(actual, item) for item in values)
+    actual_number = _as_float(actual)
+    expected_number = _as_float(expected)
+    if actual_number is None or expected_number is None:
+        return False
+    if operator == "greater_than":
+        return actual_number > expected_number
+    if operator == "greater_than_or_equal":
+        return actual_number >= expected_number
+    if operator == "less_than":
+        return actual_number < expected_number
+    if operator == "less_than_or_equal":
+        return actual_number <= expected_number
+    return False
+
+
+FIELD_ALIASES = {
+    "observer.ingress.interface": "interface",
+    "source.ip": "source_ip",
+    "destination.ip": "destination_ip",
+    "source.port": "source_port",
+    "destination.port": "destination_port",
+    "network.bytes": "network_bytes",
+    "udp.length": "udp_length",
+    "udp.payload.length": "udp_payload_length",
+    "udp.checksum.valid": "udp_checksum_valid",
+    "udp.checksum.value_hex": "udp_checksum_hex",
+    "ecg.frame.length.claimed": "ecg_frame_length_claimed",
+    "ecg.frame.length.expected": "ecg_frame_length_expected",
+    "ecg.frame.length_valid": "ecg_frame_length_valid",
+    "ecg.artcc": "artcc",
+    "ecg.outer_message.code": "ecg_message",
+    "ecg.outer_message.name": "outer_message_name",
+    "cd2.site.id": "site_id",
+    "cd2.message.code": "message_code",
+    "cd2.message.name": "message",
+    "cd2.sequence": "sequence",
+    "cd2.channel": "channel",
+    "cd2.channel_raw_byte": "channel_raw_byte",
+    "ecg.router.timestamp_sec": "router_timestamp",
+    "cd2.radar.timestamp_sec": "radar_timestamp",
+    "radar.subtypes": "radar_subtypes",
+    "radar.range_nm": "range_nm",
+    "radar.acp": "acp",
+    "radar.azimuth_degrees": "azimuth_degrees",
+    "radar.mode_3_code": "mode_3_code",
+    "radar.altitude_feet": "altitude_feet",
+    "hash.payload.sha256": "hash_payload_sha256",
+    "hash.message.sha256": "hash_message_sha256",
+    "ecg.fingerprint": "fingerprint",
+    "parser.validation.accepted": "parser_validation_accepted",
+    "parser.validation.drop_reason": "parser_validation_drop_reason",
+    "parser.validation.warnings": "parse_warnings",
+    "security.sequence.delta": "sequence_delta",
+}
+
+
+def _record_field_value(record: Mapping[str, Any], field_name: str) -> tuple[bool, Any]:
+    if field_name in record and record.get(field_name) is not None:
+        return True, record.get(field_name)
+    alias = FIELD_ALIASES.get(field_name)
+    if alias and alias in record and record.get(alias) is not None:
+        return True, record.get(alias)
+    return False, None
+
+
+def _values_equal(actual: Any, expected: Any) -> bool:
+    if actual == expected:
+        return True
+    return str(actual) == str(expected)
+
+
 def _deduplicate_alerts(alerts: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     seen: set[tuple[str, str]] = set()
     result: list[dict[str, Any]] = []
@@ -792,6 +981,114 @@ def _alert_override_map(value: Any, schema_version: str) -> dict[str, AlertOverr
                 )
         overrides[alert_id] = AlertOverride(enabled=enabled, severity=severity)
     return overrides
+
+
+def _custom_alert_rules(value: Any, schema_version: str) -> tuple[CustomAlertRule, ...]:
+    if value is None:
+        return ()
+    if schema_version != ALERT_POLICY_V2_SCHEMA_VERSION:
+        raise ValueError("custom_rules require schema_version %s" % ALERT_POLICY_V2_SCHEMA_VERSION)
+    if not isinstance(value, list):
+        raise ValueError("custom_rules must be a list")
+    rules: list[CustomAlertRule] = []
+    seen_ids: set[str] = set()
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise ValueError("custom_rules[%d] must be an object" % index)
+        unknown = sorted(set(item) - {"id", "code", "name", "enabled", "severity", "description", "logic", "conditions"})
+        if unknown:
+            raise ValueError("custom_rules[%d] has unknown key(s): %s" % (index, ", ".join(unknown)))
+        name = _custom_rule_name(item.get("name"), index)
+        rule_id = _custom_rule_id(item, name)
+        if rule_id in seen_ids:
+            raise ValueError("custom_rules has duplicate id: %s" % rule_id)
+        seen_ids.add(rule_id)
+        enabled = item.get("enabled", True)
+        if not isinstance(enabled, bool):
+            raise ValueError("custom_rules[%d].enabled must be boolean" % index)
+        severity = item.get("severity", "medium")
+        if not isinstance(severity, str) or severity not in SEVERITY_RANK:
+            raise ValueError("custom_rules[%d].severity must be one of: %s" % (index, ", ".join(sorted(SEVERITY_RANK))))
+        description = item.get("description", "")
+        if description is None:
+            description = ""
+        if not isinstance(description, str):
+            raise ValueError("custom_rules[%d].description must be a string" % index)
+        logic = str(item.get("logic") or "ALL").upper()
+        if logic not in {"ALL", "ANY"}:
+            raise ValueError("custom_rules[%d].logic must be ALL or ANY" % index)
+        conditions = _custom_conditions(item.get("conditions"), index)
+        rules.append(
+            CustomAlertRule(
+                id=rule_id,
+                name=name,
+                enabled=enabled,
+                severity=severity,
+                description=description[:500],
+                logic=logic,
+                conditions=conditions,
+            )
+        )
+    return tuple(rules)
+
+
+def _custom_rule_name(value: Any, index: int) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("custom_rules[%d].name is required" % index)
+    return value.strip()[:120]
+
+
+def _custom_rule_id(item: Mapping[str, Any], name: str) -> str:
+    raw = item.get("id") or item.get("code") or ""
+    if raw:
+        if not isinstance(raw, str) or not CUSTOM_ALERT_ID_RE.match(raw.strip()):
+            raise ValueError("custom rule id/code must contain only letters, numbers, dots, underscores, colons, or dashes")
+        return raw.strip()
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:10].upper()
+    return "OAD-CUSTOM-%s" % digest
+
+
+def _custom_conditions(value: Any, rule_index: int) -> tuple[CustomAlertCondition, ...]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("custom_rules[%d].conditions must be a non-empty list" % rule_index)
+    conditions: list[CustomAlertCondition] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise ValueError("custom_rules[%d].conditions[%d] must be an object" % (rule_index, index))
+        unknown = sorted(set(item) - {"field", "operator", "value"})
+        if unknown:
+            raise ValueError(
+                "custom_rules[%d].conditions[%d] has unknown key(s): %s"
+                % (rule_index, index, ", ".join(unknown))
+            )
+        field_name = item.get("field")
+        if not isinstance(field_name, str) or not CUSTOM_ALERT_FIELD_RE.match(field_name.strip()):
+            raise ValueError("custom_rules[%d].conditions[%d].field is invalid" % (rule_index, index))
+        operator = item.get("operator")
+        if not isinstance(operator, str):
+            raise ValueError("custom_rules[%d].conditions[%d].operator is required" % (rule_index, index))
+        normalized_operator = _normalize_custom_operator(operator)
+        if normalized_operator not in CUSTOM_ALERT_OPERATORS:
+            raise ValueError("custom_rules[%d].conditions[%d].operator is not supported" % (rule_index, index))
+        if normalized_operator in CUSTOM_ALERT_VALUE_OPERATORS and "value" not in item:
+            raise ValueError("custom_rules[%d].conditions[%d].value is required" % (rule_index, index))
+        condition_value = item.get("value")
+        if normalized_operator in {"in_list", "not_in_list"} and not isinstance(condition_value, list):
+            raise ValueError("custom_rules[%d].conditions[%d].value must be a list" % (rule_index, index))
+        if normalized_operator not in {"in_list", "not_in_list"} and isinstance(condition_value, (dict, list)):
+            raise ValueError("custom_rules[%d].conditions[%d].value must be a scalar" % (rule_index, index))
+        conditions.append(
+            CustomAlertCondition(
+                field=field_name.strip(),
+                operator=normalized_operator,
+                value=condition_value,
+            )
+        )
+    return tuple(conditions)
+
+
+def _normalize_custom_operator(value: str) -> str:
+    return value.strip().lower().replace(" ", "_").replace("-", "_")
 
 
 def _warning_to_dict(value: Any) -> dict[str, Any]:
